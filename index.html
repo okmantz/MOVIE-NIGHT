@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b10">
+<meta name="description" content="Movie Night — answer a few this-or-that questions and get the perfect movie. Solo, shuffle, Top 20 and a couples mode that finds a film you'll both love.">
+<title>Movie Night — Find tonight's movie</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="brand"><span class="brand-mark">▶</span> Movie&nbsp;Night</div>
+  <button id="header-profile" class="header-profile" aria-label="Open your profile"></button>
+</header>
+
+<main id="app">
+  <!-- BROWSE -->
+  <section id="view-home" class="view active">
+    <div class="hero">
+      <h1>What are we<br>watching tonight?</h1>
+      <p>Browse 260+ hand-picked films, or let the quiz read your mood.</p>
+      <button class="btn btn-primary btn-big" data-goto="quiz">✦ &nbsp;Start the Mood Quiz</button>
+    </div>
+    <div class="search-row">
+      <input id="search" type="search" placeholder="Search titles, directors, vibes…" aria-label="Search movies">
+      <select id="sort" aria-label="Sort movies">
+        <option value="title">A – Z</option>
+        <option value="new">Newest first</option>
+        <option value="old">Oldest first</option>
+        <option value="short">Shortest first</option>
+      </select>
+    </div>
+    <div id="genre-chips" class="chips" role="tablist" aria-label="Filter by genre"></div>
+    <p id="browse-count" class="count-line"></p>
+    <div id="movie-grid" class="grid"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="view-quiz" class="view">
+    <div id="quiz-setup" class="panel">
+      <h2>Mood Match Quiz</h2>
+      <p class="muted">Two movies, one tap. Pick the one you're more in the mood for — there are no wrong answers. After the last round we'll line up 3–5 films matched to your taste.</p>
+      <p class="label">How many rounds?</p>
+      <div class="segmented" id="quiz-rounds">
+        <button data-rounds="10" class="seg">10<span>quick</span></button>
+        <button data-rounds="15" class="seg selected">15<span>classic</span></button>
+        <button data-rounds="20" class="seg">20<span>deep cut</span></button>
+      </div>
+      <button id="quiz-start" class="btn btn-primary btn-big">Start quiz</button>
+    </div>
+    <div id="quiz-play" class="hidden">
+      <div class="progress-wrap"><div id="quiz-progress" class="progress"></div></div>
+      <p id="quiz-counter" class="counter"></p>
+      <h2 class="quiz-q">Which are you more in the mood for?</h2>
+      <div id="quiz-pair" class="pair"></div>
+      <div class="pair-alt">
+        <button id="quiz-both" class="btn btn-ghost">Both sound good</button>
+        <button id="quiz-neither" class="btn btn-ghost">Neither, skip</button>
+      </div>
+    </div>
+    <div id="quiz-results" class="hidden"></div>
+  </section>
+
+  <!-- TOP 20 -->
+  <section id="view-top20" class="view">
+    <div class="panel slim">
+      <h2>Top 20 of All Time</h2>
+      <p class="muted">Our editorial canon — the twenty films we'd hand a stranger and say “start here.” Ranked, argued over, final.</p>
+    </div>
+    <div id="top20-list"></div>
+  </section>
+
+  <!-- SHUFFLE -->
+  <section id="view-shuffle" class="view">
+    <div class="panel">
+      <h2>Shuffle Night</h2>
+      <p class="muted">Decision fatigue? We'll deal you five random films. Re-shuffle until one sticks.</p>
+      <div class="search-row">
+        <select id="shuffle-genre" aria-label="Limit shuffle to a genre"></select>
+        <button id="shuffle-go" class="btn btn-primary">🔀 &nbsp;Shuffle 5 movies</button>
+      </div>
+    </div>
+    <div id="shuffle-results" class="grid"></div>
+  </section>
+
+  <!-- MORE -->
+  <section id="view-more" class="view">
+    <h2>More ways to play</h2>
+    <button class="big-link" data-goto="couples">
+      <span class="big-link-emoji">💞</span>
+      <span><strong>Couples Mode</strong><small>Pass the phone back and forth — we'll find a film you'll both love.</small></span>
+      <span class="chev">›</span>
+    </button>
+    <button class="big-link" data-goto="profile">
+      <span class="big-link-emoji">👤</span>
+      <span><strong>Profiles</strong><small>Your taste profile, favorites, watchlist and quiz history.</small></span>
+      <span class="chev">›</span>
+    </button>
+    <div class="panel about">
+      <h3>How Movie Night picks</h3>
+      <p class="muted">Every film in the library carries a “taste vector” — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. Your quiz picks build a matching vector, and we recommend the films whose vectors point the same way. Couples mode averages two vectors and gives extra weight to whatever you both love.</p>
+      <p class="muted">Add it to your home screen: in your browser menu choose <em>Add to Home Screen</em> / <em>Install app</em>.</p>
+    </div>
+  </section>
+
+  <!-- COUPLES -->
+  <section id="view-couples" class="view">
+    <div id="couples-setup" class="panel">
+      <h2>💞 Couples Mode</h2>
+      <p class="muted">One phone, two tastes. You'll take turns — one pick each round — and we'll find the films sitting right where your tastes overlap.</p>
+      <label class="label" for="couple-a">Partner one</label>
+      <select id="couple-a" class="select"></select>
+      <label class="label" for="couple-b">Partner two</label>
+      <select id="couple-b" class="select"></select>
+      <p class="label">How many rounds? <span class="muted">(split evenly between you)</span></p>
+      <div class="segmented" id="couple-rounds">
+        <button data-rounds="12" class="seg">12<span>6 each</span></button>
+        <button data-rounds="16" class="seg selected">16<span>8 each</span></button>
+        <button data-rounds="20" class="seg">20<span>10 each</span></button>
+      </div>
+      <button id="couples-start" class="btn btn-primary btn-big">Start couples quiz</button>
+      <p id="couples-error" class="error hidden">Pick two different profiles — add a second one on the Profiles page if you need to.</p>
+    </div>
+    <div id="couples-play" class="hidden">
+      <div class="progress-wrap"><div id="couples-progress" class="progress"></div></div>
+      <p id="couples-counter" class="counter"></p>
+      <h2 class="quiz-q" id="couples-turn-label"></h2>
+      <div id="couples-pair" class="pair"></div>
+      <div class="pair-alt">
+        <button id="couples-both" class="btn btn-ghost">Both sound good</button>
+        <button id="couples-neither" class="btn btn-ghost">Neither, skip</button>
+      </div>
+    </div>
+    <div id="couples-results" class="hidden"></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="view-profile" class="view">
+    <div id="profile-switcher" class="chips"></div>
+    <div id="profile-card"></div>
+    <div class="panel">
+      <h3 id="profile-form-title">Add a profile</h3>
+      <label class="label" for="pf-name">Name</label>
+      <input id="pf-name" class="input" type="text" maxlength="24" placeholder="e.g. Alex">
+      <p class="label">Avatar</p>
+      <div id="pf-emojis" class="emoji-row"></div>
+      <p class="label">Color</p>
+      <div id="pf-colors" class="color-row"></div>
+      <div class="row-gap">
+        <button id="pf-save" class="btn btn-primary">Save profile</button>
+        <button id="pf-new" class="btn btn-ghost">+ New profile</button>
+      </div>
+    </div>
+    <div id="profile-lists"></div>
+  </section>
+</main>
+
+<!-- DETAIL SHEET -->
+<div id="detail-overlay" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="sheet" id="detail-sheet"></div>
+</div>
+
+<!-- PASS THE PHONE -->
+<div id="pass-overlay" class="overlay center hidden">
+  <div class="pass-card">
+    <div class="pass-emoji">📱💞</div>
+    <p class="muted">Pass the phone…</p>
+    <h2 id="pass-title"></h2>
+    <p class="muted">Your turn to pick. No peeking at their answers.</p>
+    <button id="pass-go" class="btn btn-primary btn-big"></button>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="Main">
+  <button data-goto="home" class="tab active"><span>🏠</span>Home</button>
+  <button data-goto="quiz" class="tab"><span>🎯</span>Quiz</button>
+  <button data-goto="top20" class="tab"><span>🏆</span>Top 20</button>
+  <button data-goto="shuffle" class="tab"><span>🔀</span>Shuffle</button>
+  <button data-goto="more" class="tab"><span>☰</span>More</button>
+</nav>
+
+<script src="js/movies.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+</body>
+</html>
