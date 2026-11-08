@@ -9,8 +9,19 @@ let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('  ok -', name); }
 
 console.log('Dataset');
-check(`has at least 180 movies (actual: ${MOVIES.length})`, () => {
-  assert.ok(MOVIES.length >= 180);
+check(`has at least 1000 movies (actual: ${MOVIES.length})`, () => {
+  assert.ok(MOVIES.length >= 1000);
+});
+check('at least 70% of the catalog is from 2000 or later', () => {
+  const modern = MOVIES.filter(m => m.year >= 2000).length;
+  assert.ok(modern / MOVIES.length >= 0.70, `only ${(100 * modern / MOVIES.length).toFixed(1)}% modern`);
+});
+check('every main genre has at least 100 entries (multi-genre tags counted)', () => {
+  const counts = {};
+  for (const m of MOVIES) for (const g of m.genres) counts[g] = (counts[g] || 0) + 1;
+  for (const g of ['Action', 'Sci-Fi', 'Horror', 'Thriller', 'Drama', 'Comedy', 'Romance', 'Crime', 'Animation', 'Fantasy', 'Adventure']) {
+    assert.ok((counts[g] || 0) >= 100, `genre ${g} has only ${counts[g] || 0}`);
+  }
 });
 check('every movie has all required fields', () => {
   for (const m of MOVIES) {
@@ -41,6 +52,22 @@ check('Top 20 has 20 entries, all in the dataset', () => {
   assert.strictEqual(TOP20.length, 20);
   const ids = new Set(MOVIES.map(m => m.id));
   for (const t of TOP20) assert.ok(ids.has(t.id), `Top20 id not in dataset: ${t.id}`);
+});
+check('Top 20 follows the spec: Inception #1 plus the required titles', () => {
+  assert.strictEqual(TOP20[0].id, 'inception', 'rank 1 must be Inception');
+  assert.deepStrictEqual(TOP20.map(t => t.rank), Array.from({ length: 20 }, (_, i) => i + 1), 'ranks must run 1..20');
+  const ids = new Set(TOP20.map(t => t.id));
+  for (const req of ['the-matrix', 'talk-to-me', 'the-dark-knight',
+    'the-lord-of-the-rings-the-return-of-the-king', 'the-wolf-of-wall-street',
+    'spider-man-into-the-spider-verse', 'the-hangover', 'interstellar']) {
+    assert.ok(ids.has(req), `Top 20 is missing required title: ${req}`);
+  }
+  // Remaining slots are the Rotten Tomatoes all-time selection
+  for (const rt of ['the-godfather', 'parasite', 'casablanca', '12-angry-men',
+    "schindler-s-list", 'pulp-fiction', 'seven-samurai', 'spirited-away',
+    'mad-max-fury-road', 'the-godfather-part-ii', 'toy-story']) {
+    assert.ok(ids.has(rt), `Top 20 is missing RT selection: ${rt}`);
+  }
 });
 
 console.log('Quiz engine');
