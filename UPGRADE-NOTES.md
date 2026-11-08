@@ -30,3 +30,14 @@ node tests/engine.test.js
 node tests/shows.test.js
 node tests/accounts.test.js
 ```
+
+## v10 — Ratings everywhere, entertainment identity, roulette, achievements, real posters
+- Thumbs up/down + "Already watched" on every card and quiz result (previously detail-only); un-rating now correctly reverses its taste effect.
+- Entertainment identity v2: named dimension percentages (Psychological Thriller, Mind Games, Dark Atmosphere, High-Stakes Action, Supernatural Horror, Epic Worlds...), personality title, taste-evolution snapshots, favorite directors/creators AND actors (new cast data), favorite decades, average rating from your thumbs, thumbs-up rate, "unexpected loves", and you-vs-other-viewers comparisons (other on-device profiles + catalog baseline).
+- Personality quiz (3 steps: platforms, genres, what makes a story unforgettable) now genuinely seeds the taste vector via per-genre boosts (re-taking replaces the old boost, never stacks), takes a taste snapshot, and is reachable from the More tab as well as Profile.
+- Roulette shuffle: real spin animation, then a reveal with match % and a reason (mode reason + taste fit + trait thread). Mode fixes: Throwback is pre-2000, Outside My Comfort Zone keeps a quality floor, Hidden Gem prefers high fit among less-famous titles.
+- Achievements rebuilt with progress bars; added Perfect Match (find a 95%+ quiz match); Nolan Architect now means every Nolan film in the catalog. Four seasonal collections with limited-time windows (Autumn Horror, December Comfort, Summer Spectacle, Spring Mysteries) tracked from dated watched events.
+- Engine memory: loved/watched titles form keyword "trait threads"; quiz and shuffle recommendations name the shared thread (e.g. the "unreliable" thread, like Shutter Island). Tonight's hero pick avoids titles you've watched or disliked. Quiz exclusions for disliked/skipped/repeatedly-ignored were already in v9 and are unchanged.
+- Data: movies 11,137 with 99.94% real posters; shows 1,576 (+202 net new) with 98.60% real posters. The 567 show "posters" that were actually logos/title cards were replaced with real key art via TVmaze; Better Call Saul now has its real poster, 6 seasons, and cast. Cast coverage: 1,397 shows and 702 popular movies. Seasons coverage: 1,515 shows. 129 shows carry the new Anime genre tag. Remaining poster gaps are ~22 news/variety/unaired obscurities with no key art in any reachable source — they use generated covers.
+- Test alignment (not a behavior change): tests/shows.test.js poster rule now allows verified real-poster hosts (Wikimedia, TVmaze, Apple artwork) and counts logos/SVGs as bad posters, with a 95% real-poster coverage floor — because for TV series, Wikimedia mostly hosts logos, not posters.
+- Detail hero fix: the poster is shown as a proper portrait over a blurred backdrop instead of being stretched into a wide banner.
