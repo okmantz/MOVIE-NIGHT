@@ -239,3 +239,13 @@ main{max-width:1060px; margin:0 auto; padding:16px 16px 30px}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important}
 }
+
+/* ---- v6: TV shows section ---- */
+.row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+.media-switch{margin:16px 0 6px}
+.media-switch .seg{flex:1}
+.panel-title{margin:0 0 4px}
+.fineprint{color:var(--muted); font-size:.85rem; margin:6px 0}
+.shows-hero h2{margin-top:2px}
+#show-shuffle-results .grid{margin-top:14px}
+#quiz-pool{margin-bottom:14px}
