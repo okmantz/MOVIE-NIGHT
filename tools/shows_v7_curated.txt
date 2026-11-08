@@ -1,0 +1,1190 @@
+# Movie Night v7 — hand-curated TV series list (the single source of truth for show metadata).
+# Format:  Title|startYear|endYear (blank = still running / revived)|network|Genres (comma list)|one-line description
+# Special genre tokens: Kids = family-friendly for young kids; Adult = adult-oriented (never family-friendly).
+# A blank description means "keep the existing Wikipedia-derived description if the title already exists".
+# Years/networks are the ORIGINAL run; the app says so on every card. Only series I am confident about are listed.
+# ---------------------------------------------------------------- existing core titles (metadata repair)
+24|2001|2010|Fox|Action,Thriller|
+30 Rock|2006|2013|NBC|Comedy|
+Abbott Elementary|2021||ABC|Comedy|
+Adventure Time|2010|2018|Cartoon Network|Animation,Fantasy,Kids|
+Alice in Borderland|2020|2025|Netflix|Sci-Fi,Thriller|
+American Horror Story|2011||FX|Horror,Thriller|
+Andor|2022|2025|Disney+|Sci-Fi,Action|
+Arcane|2021|2024|Netflix|Animation,Action|
+Arrested Development|2003|2019|Fox|Comedy|
+Atlanta|2016|2022|FX|Comedy,Drama|
+Attack on Titan|2013|2023|MBS (Japan)|Animation,Action,Adult|
+Avatar: The Last Airbender|2005|2008|Nickelodeon|Animation,Action,Kids|
+Barry|2018|2023|HBO|Comedy,Crime|
+Bates Motel|2013|2017|A&E|Horror,Drama|
+Battlestar Galactica|2004|2009|Syfy|Sci-Fi,Drama|
+Beef|2023||Netflix|Drama,Comedy|
+Better Call Saul|2015|2022|AMC|Drama,Crime|
+Big Little Lies|2017|2019|HBO|Drama,Mystery|
+Black Mirror|2011||Channel 4 / Netflix|Sci-Fi,Thriller|
+Blue Eye Samurai|2023||Netflix|Animation,Action,Adult|
+Blue Planet II|2017|2017|BBC One|Documentary|
+Bluey|2018||ABC Kids (Australia)|Animation,Family,Kids|
+Boardwalk Empire|2010|2014|HBO|Drama,Crime|
+Bodyguard|2018|2018|BBC One|Thriller,Drama|
+BoJack Horseman|2014|2020|Netflix|Animation,Comedy,Adult|
+Breaking Bad|2008|2013|AMC|Drama,Crime|
+Bridgerton|2020||Netflix|Romance,Drama|
+Broadchurch|2013|2017|ITV|Drama,Crime|
+Brooklyn Nine-Nine|2013|2021|Fox / NBC|Comedy,Crime|
+Castlevania|2017|2021|Netflix|Animation,Horror,Adult|
+Chef's Table|2015||Netflix|Documentary|
+Chernobyl|2019|2019|HBO|Drama|
+Community|2009|2015|NBC / Yahoo Screen|Comedy|
+Cosmos: A Spacetime Odyssey|2014|2014|Fox / National Geographic|Documentary|
+Curb Your Enthusiasm|2000|2024|HBO|Comedy|
+Daredevil|2015|2018|Netflix|Superhero,Action|
+Dark|2017|2020|Netflix|Sci-Fi,Thriller|
+Deadwood|2004|2006|HBO|Drama,Western|
+Dexter|2006|2013|Showtime|Crime,Drama|
+Doctor Who|1963||BBC One|Sci-Fi,Adventure|
+Downton Abbey|2010|2015|ITV|Drama|
+Emily in Paris|2020||Netflix|Rom-Com,Comedy|
+ER|1994|2009|NBC|Drama|
+Fallout|2024||Prime Video|Sci-Fi,Drama|
+Fargo|2014||FX|Crime,Drama|
+Fleabag|2016|2019|BBC Three|Comedy,Drama|
+For All Mankind|2019||Apple TV+|Sci-Fi,Drama|
+Foundation|2021||Apple TV+|Sci-Fi,Drama|
+Friday Night Lights|2006|2011|NBC|Drama|
+Friends|1994|2004|NBC|Comedy,Romance|
+Fringe|2008|2013|Fox|Sci-Fi,Drama|
+From|2022||MGM+|Horror,Mystery|
+Futurama|1999||Fox / Comedy Central / Hulu|Animation,Sci-Fi,Adult|
+Game of Thrones|2011|2019|HBO|Drama,Fantasy|
+Godless|2017|2017|Netflix|Drama,Western|
+Good Omens|2019||Prime Video|Fantasy,Comedy|
+Gravity Falls|2012|2016|Disney Channel|Animation,Mystery,Kids|
+Grey's Anatomy|2005||ABC|Drama,Romance|
+Hacks|2021||Max|Comedy,Drama|
+Hannibal|2013|2015|NBC|Horror,Crime|
+Happy Valley|2014|2023|BBC One|Drama,Crime|
+Heartstopper|2022||Netflix|Romance,Drama|
+Heroes|2006|2010|NBC|Superhero,Drama|
+His Dark Materials|2019|2022|BBC One / HBO|Fantasy,Adventure|
+Homeland|2011|2020|Showtime|Drama,Thriller|
+House|2004|2012|Fox|Drama,Mystery|
+House of the Dragon|2022||HBO|Drama,Fantasy|
+How I Met Your Mother|2005|2014|CBS|Comedy,Romance|
+Invincible|2021||Prime Video|Animation,Superhero,Adult|
+It's Always Sunny in Philadelphia|2005||FX / FXX|Comedy|
+Justified|2010|2015|FX|Drama,Crime|
+Killing Eve|2018|2022|BBC America|Thriller,Drama|
+Line of Duty|2012|2021|BBC One|Drama,Crime|
+Loki|2021|2023|Disney+|Superhero,Sci-Fi|
+Lost|2004|2010|ABC|Drama,Sci-Fi|
+Love, Death & Robots|2019||Netflix|Animation,Sci-Fi,Adult|
+Lupin|2021||Netflix|Crime,Drama|
+Luther|2010|2019|BBC One|Crime,Drama|
+Mad Men|2007|2015|AMC|Drama|
+Making a Murderer|2015|2018|Netflix|Documentary,Crime|
+Mare of Easttown|2021|2021|HBO|Drama,Crime|
+Midnight Mass|2021|2021|Netflix|Horror,Drama|
+Mindhunter|2017|2019|Netflix|Crime,Drama|
+Modern Family|2009|2020|ABC|Comedy,Family|
+Money Heist|2017|2021|Antena 3 / Netflix|Crime,Thriller|
+Narcos|2015|2017|Netflix|Crime,Drama|
+Nobody Wants This|2024||Netflix|Rom-Com,Comedy|
+Normal People|2020|2020|Hulu / BBC Three|Romance,Drama|
+Only Murders in the Building|2021||Hulu|Comedy,Mystery|
+Orphan Black|2013|2017|BBC America / Space|Sci-Fi,Thriller|
+Our Planet|2019||Netflix|Documentary|
+Outlander|2014||Starz|Drama,Romance|
+Over the Garden Wall|2014|2014|Cartoon Network|Animation,Fantasy,Kids|
+Ozark|2017|2022|Netflix|Crime,Drama|
+Parks and Recreation|2009|2015|NBC|Comedy|
+Peacemaker|2022||HBO Max|Superhero,Action|
+Peaky Blinders|2013|2022|BBC Two / BBC One|Drama,Crime|
+Penny Dreadful|2014|2016|Showtime|Horror,Drama|
+Planet Earth|2006|2006|BBC One|Documentary|
+Planet Earth II|2016|2016|BBC One|Documentary|
+Prehistoric Planet|2022|2023|Apple TV+|Documentary|
+Primal|2019||Adult Swim|Animation,Action,Adult|
+Prison Break|2005|2017|Fox|Action,Drama|
+Rick and Morty|2013||Adult Swim|Animation,Sci-Fi,Adult|
+RuPaul's Drag Race|2009||Logo / VH1 / MTV|Reality,Comedy|
+Russian Doll|2019|2022|Netflix|Comedy,Drama|
+Samurai Jack|2001|2017|Cartoon Network / Adult Swim|Animation,Action|
+Schitt's Creek|2015|2020|CBC / Pop TV|Comedy|
+Scrubs|2001|2010|NBC / ABC|Comedy,Drama|
+Seinfeld|1989|1998|NBC|Comedy|
+Severance|2022||Apple TV+|Sci-Fi,Thriller|
+Shadow and Bone|2021|2023|Netflix|Fantasy,Drama|
+Sharp Objects|2018|2018|HBO|Drama,Mystery|
+Sherlock|2010|2017|BBC One|Crime,Drama|
+Shogun|2024||FX|Drama,War|
+Silo|2023||Apple TV+|Sci-Fi,Drama|
+Six Feet Under|2001|2005|HBO|Drama,Comedy|
+Slow Horses|2022||Apple TV+|Thriller,Drama|
+Smallville|2001|2011|The WB / The CW|Superhero,Drama|
+Sons of Anarchy|2008|2014|FX|Drama,Crime|
+South Park|1997||Comedy Central|Animation,Comedy,Adult|
+Squid Game|2021|2025|Netflix|Thriller,Drama|
+Star Trek: The Next Generation|1987|1994|Syndication|Sci-Fi,Drama|
+Station Eleven|2021|2021|HBO Max|Drama,Sci-Fi|
+Stranger Things|2016|2025|Netflix|Sci-Fi,Horror|
+Succession|2018|2023|HBO|Drama,Comedy|
+Survivor|2000||CBS|Reality,Adventure|
+Ted Lasso|2020|2023|Apple TV+|Comedy,Drama|
+The Americans|2013|2018|FX|Drama,Thriller|
+The Bear|2022||FX / Hulu|Drama,Comedy|
+The Big Bang Theory|2007|2019|CBS|Comedy|
+The Boys|2019||Prime Video|Superhero,Action|
+The Crown|2016|2023|Netflix|Drama|
+The Expanse|2015|2022|Syfy / Prime Video|Sci-Fi,Drama|
+The Good Place|2016|2020|NBC|Comedy,Fantasy|
+The Good Wife|2009|2016|CBS|Drama,Mystery|
+The Great British Bake Off|2010||BBC Two / Channel 4|Reality,Comedy|
+The Handmaid's Tale|2017|2025|Hulu|Drama,Sci-Fi|
+The Haunting of Hill House|2018|2018|Netflix|Horror,Drama|
+The Jinx|2015||HBO|Documentary,Crime|
+The Last Dance|2020|2020|ESPN / Netflix|Documentary|
+The Last of Us|2023||HBO|Drama,Horror|
+The Lord of the Rings: The Rings of Power|2022||Prime Video|Fantasy,Drama|
+The Mandalorian|2019||Disney+|Sci-Fi,Action|
+The Night Agent|2023||Netflix|Action,Thriller|
+The Night Of|2016|2016|HBO|Crime,Drama|
+The Office|2005|2013|NBC|Comedy|
+The Queen's Gambit|2020|2020|Netflix|Drama|
+The Sandman|2022|2025|Netflix|Fantasy,Drama|
+The Shield|2002|2008|FX|Drama,Crime|
+The Simpsons|1989||Fox|Animation,Comedy|
+The Sopranos|1999|2007|HBO|Drama,Crime|
+The Terror|2018|2019|AMC|Horror,Drama|
+The Traitors|2023||Peacock|Reality,Mystery|
+The Umbrella Academy|2019|2024|Netflix|Superhero,Drama|
+The Walking Dead|2010|2022|AMC|Horror,Drama|
+The West Wing|1999|2006|NBC|Drama|
+The Wire|2002|2008|HBO|Drama,Crime|
+The Witcher|2019||Netflix|Fantasy,Action|
+The X-Files|1993|2018|Fox|Sci-Fi,Mystery|
+This Is Us|2016|2022|NBC|Drama,Romance|
+Tiger King|2020|2021|Netflix|Documentary,Crime|
+True Detective|2014||HBO|Crime,Drama|
+Unbelievable|2019|2019|Netflix|Drama,Crime|
+Veep|2012|2019|HBO|Comedy|
+WandaVision|2021|2021|Disney+|Superhero,Drama|
+Watchmen|2019|2019|HBO|Superhero,Drama|
+Wednesday|2022||Netflix|Comedy,Fantasy|
+Westworld|2016|2022|HBO|Sci-Fi,Drama|
+What We Do in the Shadows|2019|2024|FX|Comedy,Horror|
+When They See Us|2019|2019|Netflix|Drama|
+Wild Wild Country|2018|2018|Netflix|Documentary,Crime|
+X-Men '97|2024||Disney+|Animation,Superhero|
+Yellowjackets|2021||Showtime|Drama,Horror|
+You|2018|2025|Lifetime / Netflix|Thriller,Drama|
+# ---------------------------------------------------------------- repaired years for retained catalog titles
+Alias|2001|2006|ABC|Action,Thriller|
+Altered Carbon|2018|2020|Netflix|Sci-Fi,Action|
+American Dad!|2005||Fox / TBS|Animation,Comedy,Adult|
+American Gods|2017|2021|Starz|Fantasy,Drama|
+American Vandal|2017|2018|Netflix|Comedy,Crime|
+Angel|1999|2004|The WB|Fantasy,Drama|
+Archer|2009|2023|FX / FXX|Animation,Comedy,Adult|
+Band of Brothers|2001|2001|HBO|War,Drama|
+Big Love|2006|2011|HBO|Drama|
+Black Lightning|2018|2021|The CW|Superhero,Drama|
+Black-ish|2014|2022|ABC|Comedy,Family|
+Buffy the Vampire Slayer|1997|2003|The WB / UPN|Fantasy,Horror|
+Burn Notice|2007|2013|USA Network|Action,Crime|
+Castle|2009|2016|ABC|Crime,Mystery|
+Charlie's Angels|1976|1981|ABC|Action,Crime|
+Columbo|1968|2003|NBC / ABC|Crime,Mystery|
+Covert Affairs|2010|2014|USA Network|Action,Thriller|
+CSI: Crime Scene Investigation|2000|2015|CBS|Crime,Mystery|
+CSI: Miami|2002|2012|CBS|Crime,Mystery|
+Daisy Jones & the Six|2023|2023|Prime Video|Drama|
+Dallas|1978|1991|CBS|Drama|
+Dancing with the Stars|2005||ABC / Disney+|Reality|
+Daria|1997|2002|MTV|Animation,Comedy|
+Dynasty|1981|1989|ABC|Drama|
+Entourage|2004|2011|HBO|Comedy,Drama|
+Eureka|2006|2012|Syfy|Sci-Fi,Comedy|
+Family Guy|1999||Fox|Animation,Comedy,Adult|
+Firefly|2002|2003|Fox|Sci-Fi,Western|
+Flight of the Conchords|2007|2009|HBO|Comedy|
+Ghost Whisperer|2005|2010|CBS|Fantasy,Drama|
+Hawaii Five-0|2010|2020|CBS|Crime,Action|
+Hill Street Blues|1981|1987|NBC|Crime,Drama|
+Homecoming|2018|2020|Prime Video|Thriller,Drama|
+House of Cards|2013|2018|Netflix|Drama,Thriller|
+ICarly|2007|2012|Nickelodeon|Comedy,Kids|
+King of the Hill|1997|2010|Fox|Animation,Comedy|
+Lie to Me|2009|2011|Fox|Crime,Drama|
+Longmire|2012|2017|A&E / Netflix|Crime,Western|
+Lost in Space|2018|2021|Netflix|Sci-Fi,Adventure|
+Louie|2010|2015|FX|Comedy,Drama|
+Lucifer|2016|2021|Fox / Netflix|Fantasy,Crime|
+M*A*S*H|1972|1983|CBS|Comedy,War|
+MacGyver|2016|2021|CBS|Action,Adventure|
+Magnum P.I.|2018|2024|CBS / NBC|Action,Crime|
+Malcolm in the Middle|2000|2006|Fox|Comedy,Family|
+Maniac|2018|2018|Netflix|Sci-Fi,Comedy|
+Manifest|2018|2023|NBC / Netflix|Sci-Fi,Mystery|
+Mike & Molly|2010|2016|CBS|Comedy|
+Mission: Impossible|1966|1973|CBS|Action,Thriller|
+Mom|2013|2021|CBS|Comedy|
+Monk|2002|2009|USA Network|Crime,Comedy|
+Nip/Tuck|2003|2010|FX|Drama|
+Nine Perfect Strangers|2021||Hulu|Drama,Mystery|
+Nurse Jackie|2009|2015|Showtime|Comedy,Drama|
+Once Upon a Time|2011|2018|ABC|Fantasy,Adventure|
+One Day at a Time|2017|2020|Netflix / Pop TV|Comedy,Family|
+One Piece|2023||Netflix|Fantasy,Adventure|
+One Tree Hill|2003|2012|The WB / The CW|Drama,Romance|
+Perry Mason|2020|2023|HBO|Crime,Drama|
+Person of Interest|2011|2016|CBS|Sci-Fi,Crime|
+Pretty Little Liars|2010|2017|Freeform|Mystery,Thriller|
+Pushing Daisies|2007|2009|ABC|Fantasy,Comedy|
+Psych|2006|2014|USA Network|Comedy,Crime|
+Quantico|2015|2018|ABC|Thriller,Drama|
+Quantum Leap|2022|2024|NBC|Sci-Fi,Drama|
+Queen of the South|2016|2021|USA Network|Crime,Drama|
+Regular Show|2010|2017|Cartoon Network|Animation,Comedy,Kids|
+Revenge|2011|2015|ABC|Drama,Thriller|
+Sex and the City|1998|2004|HBO|Comedy,Romance|
+Silicon Valley|2014|2019|HBO|Comedy|
+Snowfall|2017|2023|FX|Crime,Drama|
+Snowpiercer|2020|2024|TNT / AMC|Sci-Fi,Thriller|
+Spartacus|2010|2013|Starz|Action,Drama|
+Star Trek: Voyager|1995|2001|UPN|Sci-Fi,Drama|
+Stumptown|2019|2020|ABC|Crime,Drama|
+Supergirl|2015|2021|CBS / The CW|Superhero,Drama|
+Teen Titans|2003|2006|Cartoon Network|Animation,Superhero,Kids|
+Teen Titans Go!|2013||Cartoon Network|Animation,Comedy,Kids|
+Teen Wolf|2011|2017|MTV|Fantasy,Drama|
+The 100|2014|2020|The CW|Sci-Fi,Drama|
+The Dukes of Hazzard|1979|1985|CBS|Comedy,Action|
+The Equalizer|2021|2025|CBS|Action,Crime|
+The Flash|2014|2023|The CW|Superhero,Drama|
+The Killing|2011|2014|AMC / Netflix|Crime,Drama|
+The Kominsky Method|2018|2021|Netflix|Comedy,Drama|
+The League|2009|2015|FX / FXX|Comedy|
+The Leftovers|2014|2017|HBO|Drama,Mystery|
+The Loud House|2016||Nickelodeon|Animation,Comedy,Kids|
+The Newsroom|2012|2014|HBO|Drama|
+The OA|2016|2019|Netflix|Sci-Fi,Mystery|
+The Outsider|2020|2020|HBO|Horror,Mystery|
+The Pacific|2010|2010|HBO|War,Drama|
+The Righteous Gemstones|2019||HBO|Comedy,Crime|
+The Rockford Files|1974|1980|NBC|Crime,Drama|
+The Sinner|2017|2021|USA Network|Crime,Mystery|
+The Strain|2014|2017|FX|Horror,Thriller|
+The Twilight Zone|1959|1964|CBS|Sci-Fi,Horror|
+Titans|2018|2023|DC Universe / HBO Max|Superhero,Action|
+Treme|2010|2013|HBO|Drama|
+Two and a Half Men|2003|2015|CBS|Comedy|
+Unbreakable Kimmy Schmidt|2015|2019|Netflix|Comedy|
+Under the Dome|2013|2015|CBS|Sci-Fi,Mystery|
+Victorious|2010|2013|Nickelodeon|Comedy,Kids|
+Warrior|2019|2023|Cinemax / Max|Action,Drama|
+Welcome to Wrexham|2022||FX|Documentary|
+Xena: Warrior Princess|1995|2001|Syndication|Fantasy,Action|
+Z Nation|2014|2018|Syfy|Horror,Comedy|
+# ---------------------------------------------------------------- sitcoms
+Cheers|1982|1993|NBC|Comedy|Regulars at a Boston bar trade wisecracks and heartaches.
+Frasier|1993|2004|NBC|Comedy|A snobbish Seattle psychiatrist and his family bicker through life.
+Everybody Loves Raymond|1996|2005|CBS|Comedy|A sportswriter's meddling parents live across the street.
+The Golden Girls|1985|1992|NBC|Comedy|Four older women share a Miami home and sharp one-liners.
+Home Improvement|1991|1999|ABC|Comedy,Family|A TV handyman's family life is chaos behind the tool-time grin.
+Roseanne|1988|2018|ABC|Comedy,Family|A working-class Illinois family gets by on humor.
+The Cosby Show|1984|1992|NBC|Comedy,Family|A Brooklyn doctor and lawyer raise five kids.
+Full House|1987|1995|ABC|Comedy,Family|A widowed dad gets help raising three girls from his brother-in-law and best friend.
+Fuller House|2016|2020|Netflix|Comedy,Family|DJ Tanner raises her kids with her sister and best friend.
+Family Matters|1989|1998|ABC|Comedy,Family|A Chicago family's life is upended by neighbor Steve Urkel.
+Saved by the Bell|1989|1993|NBC|Comedy,Kids|Zack Morris schemes through high school with his friends.
+The Fresh Prince of Bel-Air|1990|1996|NBC|Comedy,Family|A Philly teen moves in with wealthy relatives in Bel-Air.
+Married... with Children|1987|1997|Fox|Comedy|A bitter shoe salesman and his dysfunctional family.
+The Simpsons Movie Night|1989||Fox|Animation,Comedy|
+Will & Grace|1998|2020|NBC|Comedy|A gay lawyer and his straight best friend share a New York apartment.
+Spin City|1996|2002|ABC|Comedy|A deputy mayor of New York wrangles chaos at City Hall.
+That '70s Show|1998|2006|Fox|Comedy|Teens in 1970s Wisconsin hang out in a basement.
+That '90s Show|2023|2023|Netflix|Comedy|A new generation of teens hangs out in Point Place.
+3rd Rock from the Sun|1996|2001|NBC|Comedy,Sci-Fi|Aliens pose as a human family in Ohio.
+Mad About You|1992|1999|NBC|Comedy,Romance|Newlyweds navigate marriage in New York.
+NewsRadio|1995|1999|NBC|Comedy|A wacky New York news radio staff.
+Becker|1998|2004|CBS|Comedy|A grumpy doctor complains about everything.
+The King of Queens|1998|2007|CBS|Comedy|A delivery driver and his wife share a house with her dad.
+According to Jim|2001|2009|ABC|Comedy|A suburban Chicago dad is the king of his house.
+Everybody Hates Chris|2005|2009|UPN / The CW|Comedy,Family|A teen in 1980s Brooklyn survives school and family.
+My Wife and Kids|2001|2005|ABC|Comedy,Family|A dad tries to keep order with sarcasm and rules.
+The Bernie Mac Show|2001|2006|Fox|Comedy,Family|A comedian raises his sister's kids.
+Girlfriends|2000|2008|UPN / The CW|Comedy|Four close friends navigate life and love in Los Angeles.
+Living Single|1993|1998|Fox|Comedy|Six friends share their lives in a Brooklyn brownstone.
+Martin|1992|1997|Fox|Comedy|A Detroit radio host's life is full of sarcasm and chaos.
+Parenthood|2010|2015|NBC|Drama,Family|Four adult siblings and their families lean on each other.
+How I Met Your Dad|2022|2023|Hulu|Comedy,Romance|A 2020s New Yorker recounts her search for love.
+New Girl|2011|2018|Fox|Comedy|A quirky teacher moves in with three guys in Los Angeles.
+The Middle|2009|2018|ABC|Comedy,Family|A midwestern working family muddles through.
+The Goldbergs|2013|2023|ABC|Comedy,Family|A 1980s family seen through a camcorder-loving kid.
+Fresh Off the Boat|2015|2020|ABC|Comedy,Family|A Taiwanese-American family moves to 1990s Orlando.
+Young Sheldon|2017|2024|CBS|Comedy,Family|A child genius grows up in East Texas.
+The Neighborhood|2018||CBS|Comedy|A friendly Midwesterner moves next door to a skeptical Black family.
+Superstore|2015|2021|NBC|Comedy|Employees of a big-box store endure retail absurdity.
+The Good Place Reunion|2016|2020|NBC|Comedy,Fantasy|
+Happy Endings|2011|2013|ABC|Comedy|A group of friends stays close after a wedding gone wrong.
+2 Broke Girls|2011|2017|CBS|Comedy|Two waitresses start a cupcake business in Brooklyn.
+Last Man Standing|2011|2021|ABC / Fox|Comedy,Family|An outdoorsy dad is surrounded by women at home.
+Cougar Town|2009|2015|ABC / TBS|Comedy|Neighbors and friends bond over wine in Florida.
+Modern Love|2019|2022|Prime Video|Romance,Drama|Anthology of real love stories from the New York Times column.
+Mr. Mayor|2021|2022|NBC|Comedy|A wealthy man runs for mayor of Los Angeles on a whim.
+Man with a Plan|2016|2020|CBS|Comedy|A contractor learns to manage his kids at home.
+Black Monday|2019|2021|Showtime|Comedy|Wall Street wolves collide before the 1987 market crash.
+Ghosts|2021||CBS|Comedy,Fantasy|A couple inherits a haunted mansion full of ghosts.
+Shrinking|2023||Apple TV+|Comedy,Drama|A grieving therapist starts telling patients the blunt truth.
+Only Murders Reunion|2021||Hulu|Comedy,Mystery|
+Called to Duty|2013|2013|CBS|Comedy|
+Young Rock|2021|2023|NBC|Comedy,Family|Dwayne Johnson narrates his own childhood.
+Single Parents|2018|2020|ABC|Comedy|Single parents at a school lean on each other.
+Dave|2020|2023|FX|Comedy|Rapper Lil Dicky plays a version of himself chasing fame.
+Insecure|2016|2021|HBO|Comedy,Drama|Two Black women navigate work and love in Los Angeles.
+Broad City|2014|2019|Comedy Central|Comedy|Two friends hustle through New York.
+Girls|2012|2017|HBO|Comedy,Drama|Four twenty-something women in Brooklyn.
+The Kids Are Alright|2018|2019|ABC|Comedy,Family|A large Irish-Catholic family in 1970s California.
+Speechless|2016|2019|ABC|Comedy,Family|A family fights for their son with cerebral palsy.
+Mixed-ish|2019|2021|ABC|Comedy,Family|A biracial girl grows up in 1980s America.
+Grown-ish|2018|2024|Freeform|Comedy|Zoey Johnson navigates college life.
+Atypical|2017|2021|Netflix|Comedy,Drama|A teen on the autism spectrum looks for love.
+Dead to Me|2019|2022|Netflix|Comedy,Crime|Two women bond over grief and a secret.
+Grace and Frankie|2015|2022|Netflix|Comedy|Two older women bond after their husbands leave them for each other.
+Master of None|2015|2021|Netflix|Comedy,Drama|An actor in New York navigates love and career.
+Never Have I Ever|2020|2023|Netflix|Comedy,Drama|An Indian-American teen tries to reinvent herself.
+Sex Education|2019|2023|Netflix|Comedy,Drama|A teen opens a sex therapy clinic at school.
+The Upshaws|2021||Netflix|Comedy,Family|A Black working-class family in Indianapolis.
+Cobra Kai|2018|2025|YouTube / Netflix|Action,Comedy|Karate Kid rivals reignite their feud decades later.
+Wilfred|2011|2014|FX|Comedy|A man sees his neighbor's dog as a man in a dog suit.
+The Last Man on Earth|2015|2018|Fox|Comedy,Sci-Fi|The apparent last survivor of a virus finds other survivors.
+Raising Hope|2010|2014|Fox|Comedy,Family|A young man raises his baby daughter with his quirky family.
+Selfie|2014|2014|ABC|Comedy,Rom-Com|A social-media addict asks a coworker to fix her image.
+Trophy Wife|2013|2014|ABC|Comedy,Family|A young wife marries into a big blended family.
+Bob Hearts Abishola|2019|2024|CBS|Comedy,Rom-Com|A Nigerian nurse and a Detroit sock-company owner fall in love.
+Call Me Kat|2021|2023|Fox|Comedy,Rom-Com|A 39-year-old opens a cat café in Louisville.
+Kevin Can F**k Himself|2021|2022|AMC|Comedy,Drama|A sitcom wife imagines escaping her husband.
+Ugly Betty|2006|2010|ABC|Comedy,Drama|A kind-hearted young woman works at a fashion magazine.
+Desperate Housewives|2004|2012|ABC|Drama,Mystery|Secrets simmer behind the hedges of a suburban street.
+Gilmore Girls|2000|2007|The WB|Drama,Comedy|A mother and daughter share a sharp-witted bond in a small town.
+Gossip Girl|2007|2012|The CW|Drama,Romance|Manhattan prep-school teens are exposed by an anonymous blogger.
+Gossip Girl Reboot|2021|2023|HBO Max|Drama|
+Sabrina the Teenage Witch|1996|2003|ABC / The WB|Comedy,Fantasy|A half-witch teen navigates high school and spells.
+Boy Meets World|1993|2000|ABC|Comedy,Family|A kid and his friends grow up with the guidance of a teacher.
+Girl Meets World|2014|2017|Disney Channel|Comedy,Kids|The next generation of the Matthews family.
+Hannah Montana|2006|2011|Disney Channel|Comedy,Kids|A teen pop star lives a secret double life.
+Wizards of Waverly Place|2007|2012|Disney Channel|Comedy,Fantasy,Kids|A family of wizards runs a sandwich shop.
+The Suite Life of Zack & Cody|2005|2008|Disney Channel|Comedy,Kids|Twin brothers live in a luxury hotel.
+That's So Raven|2003|2007|Disney Channel|Comedy,Kids|A teen with visions gets into messy situations.
+Drake & Josh|2004|2007|Nickelodeon|Comedy,Kids|Two mismatched stepbrothers share a bedroom.
+Zoey 101|2005|2008|Nickelodeon|Comedy,Kids|Zoey and friends attend a California boarding school.
+Sam & Cat|2013|2014|Nickelodeon|Comedy,Kids|iCarly and Victorious stars start a babysitting business.
+Good Luck Charlie|2010|2014|Disney Channel|Comedy,Kids|A big family chronicles baby Charlie's growth.
+Jessie|2011|2015|Disney Channel|Comedy,Kids|A nanny juggles four rich kids in New York.
+Austin & Ally|2011|2016|Disney Channel|Comedy,Kids|A singer and songwriter chase fame.
+Phil of the Future|2004|2006|Disney Channel|Comedy,Sci-Fi,Kids|A family from the future gets stuck in the present.
+Even Stevens|2000|2003|Disney Channel|Comedy,Kids|A teen's everyday life has everything but normal.
+Lizzie McGuire|2001|2004|Disney Channel|Comedy,Kids|An animated alter ego narrates a middle schooler's life.
+Kim Possible|2002|2007|Disney Channel|Animation,Action,Kids|A teen hero saves the world between classes.
+Phineas and Ferb|2007|2015|Disney Channel|Animation,Comedy,Kids|Two stepbrothers build elaborate summer projects.
+SpongeBob SquarePants|1999||Nickelodeon|Animation,Comedy,Kids|A sponge lives in a pineapple under the sea.
+The Fairly OddParents|2001|2017|Nickelodeon|Animation,Comedy,Kids|A boy's fairy godparents grant chaotic wishes.
+Rugrats|1991|2004|Nickelodeon|Animation,Family,Kids|Toddlers go on adventures that grown-ups don't see.
+Hey Arnold!|1996|2004|Nickelodeon|Animation,Comedy,Kids|A fourth-grader navigates life in his big city neighborhood.
+Dora the Explorer|2000|2019|Nickelodeon|Animation,Family,Kids|A young explorer solves puzzles with her monkey friend.
+Blue's Clues|1996|2007|Nickelodeon|Animation,Family,Kids|A host and his dog search for clues with kids' help.
+Paw Patrol|2013||Nickelodeon|Animation,Family,Kids|A boy and rescue pups protect Adventure Bay.
+Peppa Pig|2004||Channel 5 / Nick Jr.|Animation,Family,Kids|A piglet and her family enjoy their daily life.
+Sesame Street|1969||PBS / HBO|Family,Comedy,Kids|Muppets and neighbors teach kids letters and numbers.
+Mister Rogers' Neighborhood|1968|2001|PBS|Family,Kids|A gentle host visits with kids about big feelings.
+Arthur|1996|2022|PBS Kids|Animation,Family,Kids|An aardvark and his friends deal with everyday life.
+Daniel Tiger's Neighborhood|2012||PBS Kids|Animation,Family,Kids|A tiger cub learns lessons from his neighbors.
+Curious George|2006|2015|PBS Kids|Animation,Family,Kids|A curious monkey learns about the world.
+Wild Kratts|2011||PBS Kids|Animation,Family,Kids|Brothers explore animal powers on adventures.
+Clifford's Puppy Days|2003|2006|PBS Kids|Animation,Family,Kids|A puppy and his friends explore life.
+Bluey Extras|2018||ABC Kids (Australia)|Animation,Family,Kids|
+Doc McStuffins|2012|2020|Disney Channel|Animation,Family,Kids|A girl fixes toys as a doctor.
+Sofia the First|2012|2018|Disney Channel|Animation,Fantasy,Kids|A girl becomes a princess.
+Mickey Mouse Clubhouse|2006|2016|Disney Channel|Animation,Family,Kids|Mickey and friends solve puzzles.
+Gabby's Dollhouse Extras|2021||Netflix|Animation,Family,Kids|
+Cocomelon|2020||YouTube / Netflix|Animation,Family,Kids|Sing-along songs and stories for toddlers.
+The Magic School Bus|1994|1997|PBS|Animation,Family,Kids|A teacher takes her class on scientific field trips.
+Bill Nye the Science Guy|1993|1998|PBS|Family,Documentary,Kids|A scientist demonstrates experiments for kids.
+Reading Rainbow|1983|2006|PBS|Family,Kids|A host recommends books to children.
+Fraggle Rock|1983|1987|HBO|Family,Fantasy,Kids|Muppets live under a lighthouse in strange underground worlds.
+The Muppet Show|1976|1981|ITV|Comedy,Family|Backstage mayhem at a vaudeville theater.
+Muppets Now|2020|2020|Disney+|Comedy,Family|Muppets run a streaming series from home.
+Bob's Burgers|2011||Fox|Animation,Comedy|A family runs a struggling burger restaurant.
+Futurama Extras|1999||Fox|Animation,Sci-Fi|
+Family Guy Extras|1999||Fox|Animation,Comedy|
+The Cleveland Show|2009|2013|Fox|Animation,Comedy,Adult|Cleveland moves to Virginia with his family.
+Beavis and Butt-Head|1993|2011|MTV|Animation,Comedy,Adult|Two teens comment on music videos and cause chaos.
+Daria Extras|1997|2002|MTV|Animation,Comedy|
+Rocko's Modern Life|1993|1996|Nickelodeon|Animation,Comedy|A wallaby deals with adulthood.
+Ren & Stimpy|1991|1996|Nickelodeon|Animation,Comedy|A cat and dog cause cartoon chaos.
+Hey Duggee|2014||CBeebies|Animation,Family,Kids|A dog leads kids in the Squirrel Club.
+Steven Universe|2013|2019|Cartoon Network|Animation,Fantasy,Kids|A boy and the Crystal Gems protect Earth.
+The Amazing World of Gumball|2011|2019|Cartoon Network|Animation,Comedy,Kids|A blue cat and his friends in an absurd suburb.
+Adventure Time Distant Lands|2020|2021|HBO Max|Animation,Fantasy,Kids|
+We Bare Bears|2015|2019|Cartoon Network|Animation,Comedy,Kids|Three bear brothers try to fit into human society.
+Dexter's Laboratory|1996|2003|Cartoon Network|Animation,Comedy,Kids|A boy genius fights his sister in a secret lab.
+The Powerpuff Girls|1998|2005|Cartoon Network|Animation,Superhero,Kids|Three super-powered girls protect their city.
+Ed, Edd n Eddy|1999|2009|Cartoon Network|Animation,Comedy,Kids|Three boys scheme to earn money for jawbreakers.
+Courage the Cowardly Dog|1999|2002|Cartoon Network|Animation,Horror,Kids|A frightened dog protects his owners from monsters.
+Johnny Bravo|1997|2004|Cartoon Network|Animation,Comedy,Kids|A pompadoured man fails with every woman.
+Foster's Home for Imaginary Friends|2004|2009|Cartoon Network|Animation,Comedy,Kids|A boy takes his imaginary friend to a home.
+Ben 10|2005|2008|Cartoon Network|Animation,Action,Kids|A boy gets an alien watch.
+Star vs. the Forces of Evil|2015|2019|Disney XD|Animation,Fantasy,Kids|A magical princess moves in with an earth family.
+DuckTales Reboot|2017|2021|Disney XD|Animation,Adventure,Kids|
+Phineas Extras|2007|2015|Disney Channel|Animation,Comedy,Kids|
+Avatar: The Legend of Korra|2012|2014|Nickelodeon|Animation,Action,Kids|The next Avatar grows into her power.
+The Legend of Vox Machina|2022||Prime Video|Animation,Fantasy,Adult|A mercenary adventuring party saves their world.
+Harley Quinn|2019|2025|DC Universe / Max|Animation,Superhero,Adult|Harley Quinn builds her own crew in Gotham.
+Spider-Man: The Animated Series|1994|1998|Fox Kids|Animation,Superhero,Kids|Peter Parker fights Marvel villains.
+X-Men: The Animated Series|1992|1997|Fox Kids|Animation,Superhero,Kids|The mutants battle prejudice and villains.
+Justice League|2001|2004|Cartoon Network|Animation,Superhero|DC's top heroes team up to defend Earth.
+Batman Beyond|1999|2001|Kids' WB|Animation,Superhero|A teenager takes up the Bat suit in a future Gotham.
+Teenage Mutant Ninja Turtles 2012|2012|2017|Nickelodeon|Animation,Action,Kids|
+Transformers: Prime|2010|2013|Hub Network|Animation,Sci-Fi,Kids|Autobots fight Decepticons on Earth.
+Star Wars: The Clone Wars|2008|2020|Cartoon Network / Disney+|Animation,Sci-Fi|Jedi lead the Republic through galactic war.
+Star Wars Rebels|2014|2018|Disney XD|Animation,Sci-Fi,Kids|A crew of rebels resist the Empire.
+The Bad Batch|2021|2024|Disney+|Animation,Sci-Fi|Clone troopers survive the rise of the Empire.
+Star Wars: Ahsoka|2023||Disney+|Sci-Fi,Action|A former Jedi hunts for a missing Imperial threat.
+The Book of Boba Fett|2021|2022|Disney+|Sci-Fi,Action|A legendary bounty hunter seizes Tatooine's underworld.
+Obi-Wan Kenobi|2022|2022|Disney+|Sci-Fi,Action|A hiding Jedi must save a young Leia.
+Skeleton Crew|2024|2025|Disney+|Sci-Fi,Adventure,Kids|Kids lost in a galaxy meet pirates.
+# ---------------------------------------------------------------- dramas & prestige
+Lonesome Dove|1989|1989|CBS|Western,Drama|Two retired Texas Rangers drive cattle to Montana.
+Twin Peaks|1990|1991|ABC|Mystery,Drama|An FBI agent investigates a small-town murder.
+NYPD Blue|1993|2005|ABC|Crime,Drama|Detectives work in a gritty Manhattan precinct.
+Homicide: Life on the Street|1993|1999|NBC|Crime,Drama|Baltimore homicide detectives deal with the job.
+Law & Order|1990|2010|NBC|Crime,Drama|Cops catch criminals; prosecutors convict them.
+Law & Order: Special Victims Unit|1999||NBC|Crime,Drama|Detectives investigate sexual offenses in New York.
+Law & Order: Criminal Intent|2001|2011|NBC / USA Network|Crime,Drama|Detectives study criminals' psychology.
+NCIS|2003||CBS|Crime,Drama|Naval investigators solve crimes involving sailors and Marines.
+Criminal Minds|2005|2020|CBS|Crime,Thriller|FBI profilers hunt serial offenders.
+Bones|2005|2017|Fox|Crime,Drama|A forensic anthropologist assists the FBI.
+The Mentalist|2008|2015|CBS|Crime,Mystery|A fake psychic joins the California Bureau of Investigation.
+Blue Bloods|2010|2024|CBS|Crime,Drama|A New York family serves in law enforcement.
+Elementary|2012|2019|CBS|Crime,Mystery|Sherlock Holmes solves crime in modern New York.
+Rizzoli & Isles|2010|2016|TNT|Crime,Drama|A detective and a medical examiner solve cases.
+Southland|2009|2013|NBC / TNT|Crime,Drama|Los Angeles cops work the street.
+Brooklyn Nine-Nine Extras|2013|2021|Fox / NBC|Comedy,Crime|
+Chicago Fire|2012||NBC|Drama|Firefighters and paramedics risk it all in Chicago.
+Chicago P.D.|2014||NBC|Crime,Drama|Cops of the 21st District fight crime.
+Chicago Med|2015||NBC|Drama|Doctors of Gaffney Hospital.
+Station 19|2018|2024|ABC|Drama|Seattle firefighters lead dramatic rescues.
+9-1-1|2018||Fox / ABC|Drama|First responders face daily emergencies in Los Angeles.
+FBI|2018||CBS|Crime,Drama|Agents investigate federal crimes in New York.
+SWAT|2017|2025|CBS|Action,Crime|An elite LAPD unit takes down threats.
+Hawaii Five-0 Extras|2010|2020|CBS|Crime,Action|
+The Rookie|2018||ABC|Crime,Drama|A 40-year-old becomes the oldest rookie in the LAPD.
+Bosch|2014|2021|Prime Video|Crime,Drama|An LAPD detective chases killers while tackling his past.
+Bosch: Legacy|2022|2025|Prime Video / Freevee|Crime,Drama|A retired detective works as a PI.
+Reacher|2022||Prime Video|Action,Thriller|A drifter and ex-military cop solves crimes.
+Tulsa King|2022||Paramount+|Crime,Drama|An ex-mobster builds a new empire in Oklahoma.
+Yellowstone|2018|2024|Paramount Network|Drama,Western|A Montana ranching family fights to keep their land.
+1883|2021|2022|Paramount+|Western,Drama|The Dutton family travels west along the Oregon Trail.
+1923|2022|2025|Paramount+|Western,Drama|The Duttons endure droughts and wars in the early 20th century.
+Landman|2024||Paramount+|Drama|Oil-field power brokers drive West Texas.
+Sons of Anarchy Spinoff Mayans|2018|2023|FX|Crime,Drama|
+Mayans M.C.|2018|2023|FX|Crime,Drama|A former prospect fights inside a Mexican-American biker club.
+Ray Donovan|2013|2020|Showtime|Crime,Drama|A fixer cleans up for LA's rich and famous.
+Billions|2016|2023|Showtime|Drama|A hedge fund king and a U.S. attorney battle.
+Shameless|2011|2021|Showtime|Comedy,Drama|A dysfunctional Chicago family survives poverty.
+Californication|2007|2014|Showtime|Comedy,Drama|A troubled writer's life is a self-destruct party.
+Weeds|2005|2012|Showtime|Comedy,Crime|A suburban widow sells marijuana to make ends meet.
+Nurse Jackie Extras|2009|2015|Showtime|Comedy,Drama|
+The L Word|2004|2009|Showtime|Drama,Romance|A group of friends in Los Angeles.
+Queer as Folk|2000|2005|Showtime|Drama|Gay friends in Pittsburgh navigate love.
+Homeland Extras|2011|2020|Showtime|Drama,Thriller|
+The Affair|2014|2019|Showtime|Drama|A story told from two competing perspectives.
+Masters of Sex|2013|2016|Showtime|Drama|The pioneering sexual-research team.
+Twin Peaks The Return|2017|2017|Showtime|Mystery,Drama|Agent Cooper returns to Twin Peaks.
+Succession Extras|2018|2023|HBO|Drama,Comedy|
+Euphoria|2019||HBO|Drama|Teens navigate addiction, identity, and love.
+The White Lotus|2021||HBO|Comedy,Drama|Guests at a luxury resort face dark secrets.
+The Pitt|2025||HBO Max|Drama|An ER crew struggles through a single hectic shift.
+Industry|2020||HBO|Drama|Young bankers fight for permanent jobs in London.
+The Gilded Age|2022||HBO|Drama|New money and old money clash in 1880s New York.
+Rome|2005|2007|HBO|Drama,War|Two Roman soldiers get tangled in the fall of the Republic.
+Oz|1997|2003|HBO|Crime,Drama|A men's prison experiment goes wrong.
+Carnivàle|2003|2005|HBO|Fantasy,Drama|A traveling carnival hides a battle between good and evil.
+Big Little Lies Extras|2017|2019|HBO|Drama,Mystery|
+The Outsider Extras|2020|2020|HBO|Horror,Mystery|
+Perry Mason Extras|2020|2023|HBO|Crime,Drama|
+Lovecraft Country|2020|2020|HBO|Horror,Fantasy|Black Americans face racism and monsters in the 1950s.
+The Plot Against America Extras|2020|2020|HBO|Drama|
+Mrs. Davis|2023|2023|Peacock|Comedy,Sci-Fi|A nun fights an all-powerful AI.
+Poker Face|2023|2025|Peacock|Mystery,Comedy|A woman with a human lie detector gift travels America.
+Bel-Air|2022|2024|Peacock|Drama|A gritty reimagining of the Fresh Prince.
+Yellowjackets Extras|2021||Showtime|Drama,Horror|
+Reservation Dogs|2021|2023|FX / Hulu|Comedy,Drama|Four Native teens in Oklahoma dream of leaving.
+Shōgun Extras|2024||FX|Drama,War|
+Fargo Extras|2014||FX|Crime,Drama|
+Mr. Robot|2015|2019|USA Network|Thriller,Drama|A hacker is recruited by a mysterious anarchist.
+The Leftovers Extras|2014|2017|HBO|Drama,Mystery|
+Halt and Catch Fire|2014|2017|AMC|Drama|The personal-computer boom of the 80s and 90s.
+Hell on Wheels|2011|2016|AMC|Western,Drama|A Confederate soldier builds the transcontinental railroad.
+Preacher|2016|2019|AMC|Fantasy,Action|A preacher and friends search for God.
+Fear the Walking Dead|2015|2023|AMC|Horror,Drama|A different family confronts the same apocalypse.
+Into the Badlands|2015|2019|AMC|Action,Fantasy|A warrior and a boy in a feudal future.
+Interview with the Vampire|2022||AMC|Horror,Drama|A vampire recounts his bloody life.
+Dark Winds|2022||AMC|Crime,Mystery|Navajo police solve crimes in the 1970s Southwest.
+Orphan Black Extras|2013|2017|BBC America|Sci-Fi,Thriller|
+Killing Eve Extras|2018|2022|BBC America|Thriller,Drama|
+The Walking Dead: Daryl Dixon|2023||AMC|Horror,Drama|Daryl Dixon wakes up in post-apocalyptic France.
+Dune: Prophecy|2024||HBO|Sci-Fi,Drama|The Bene Gesserit's origins.
+The Penguin|2024|2024|HBO|Crime,Drama|Oz Cobb rises through Gotham's underworld.
+Creature Commandos|2024||Max|Animation,Superhero,Adult|A team of monsters carries out secret missions.
+Agatha All Along|2024|2024|Disney+|Superhero,Fantasy|Agatha Harkness tries to regain her powers.
+Hawkeye|2021|2021|Disney+|Superhero,Action|Clint Barton trains Kate Bishop around Christmas.
+Moon Knight|2022|2022|Disney+|Superhero,Action|A man with dissociative identities is a mystical avenger.
+Ms. Marvel|2022|2022|Disney+|Superhero,Action|A Pakistani-American teen gets super powers.
+She-Hulk: Attorney at Law|2022|2022|Disney+|Superhero,Comedy|A lawyer becomes a super-powered green giant.
+The Falcon and the Winter Soldier|2021|2021|Disney+|Superhero,Action|Sam and Bucky team up after Endgame.
+What If...?|2021|2024|Disney+|Animation,Superhero|Alternate versions of Marvel stories.
+Daredevil: Born Again|2025||Disney+|Superhero,Action|Matt Murdock faces Wilson Fisk again.
+Echo|2024|2024|Disney+|Superhero,Action|Maya Lopez confronts her family and past.
+Ironheart|2025|2025|Disney+|Superhero,Sci-Fi|A teen inventor builds her own armor.
+Gotham|2014|2019|Fox|Crime,Superhero|Young Jim Gordon rises as Gotham's villains emerge.
+Arrow|2012|2020|The CW|Superhero,Action|Billionaire Oliver Queen becomes the Green Arrow.
+Legends of Tomorrow|2016|2022|The CW|Superhero,Sci-Fi|Misfit heroes travel through time.
+Batwoman|2019|2022|The CW|Superhero,Action|Kate Kane takes up a bat suit in Gotham.
+Riverdale|2017|2023|The CW|Drama,Mystery|Archie and his friends dive into dark mysteries.
+Chilling Adventures of Sabrina|2018|2020|Netflix|Horror,Fantasy|A half-witch faces demonic forces.
+The Vampire Diaries|2009|2017|The CW|Fantasy,Drama|A teen falls for a vampire in small-town Virginia.
+The Originals|2013|2018|The CW|Fantasy,Drama|The original vampire family rules New Orleans.
+Supernatural|2005|2020|The WB / The CW|Fantasy,Horror|Two brothers hunt monsters across America.
+Charmed|1998|2006|The WB|Fantasy,Drama|Three sisters are powerful witches.
+Roswell, New Mexico|2019|2022|The CW|Sci-Fi,Romance|An alien-human romance in a desert town.
+One of Us Is Lying Extras|2021|2022|Peacock|Thriller,Drama|
+Pretty Little Liars Extras|2010|2017|Freeform|Mystery,Thriller|
+Shadowhunters|2016|2019|Freeform|Fantasy,Drama|A teenage girl discovers a hidden world of demon hunters.
+The Vampire Diaries Extras|2009|2017|The CW|Fantasy,Drama|
+Dawson's Creek|1998|2003|The WB|Drama,Romance|Small-town teens deal with love and growing up.
+The O.C.|2003|2007|Fox|Drama|A troubled teen moves in with a wealthy family.
+90210|2008|2013|The CW|Drama|New students in Beverly Hills.
+Beverly Hills, 90210|1990|2000|Fox|Drama|A Minnesota family moves to Beverly Hills.
+Melrose Place|1992|1999|Fox|Drama|Twenty-somethings share an LA apartment building.
+Grey's Anatomy Extras|2005||ABC|Drama,Romance|
+Private Practice|2007|2013|ABC|Drama|Addison Montgomery moves to LA.
+Scandal|2012|2018|ABC|Drama,Thriller|A crisis manager protects Washington's elite.
+How to Get Away with Murder|2014|2020|ABC|Drama,Thriller|A law professor and her students entangle in a murder.
+Revenge Extras|2011|2015|ABC|Drama,Thriller|
+Nashville|2012|2018|ABC / CMT|Drama|Country music stars chase fame and fortune.
+Empire|2015|2020|Fox|Drama|A music mogul's family battles for control.
+Star|2016|2019|Fox|Drama|Three young women chase music dreams in Atlanta.
+Glee|2009|2015|Fox|Comedy,Drama|A high-school glee club tries to win competitions.
+Smash|2012|2013|NBC|Drama|A Broadway musical comes to life.
+Friday Night Lights Extras|2006|2011|NBC|Drama|
+Chuck|2007|2012|NBC|Action,Comedy|A computer geek is accidentally embedded with government secrets.
+Heroes Reborn Extras|2015|2016|NBC|Sci-Fi,Drama|
+The Blacklist|2013|2023|NBC|Crime,Thriller|A criminal mastermind helps the FBI catch other criminals.
+The Good Doctor|2017|2024|ABC|Drama|A young surgeon with autism and savant syndrome.
+New Amsterdam|2018|2023|NBC|Drama|A medical director reforms a New York hospital.
+The Resident|2018|2023|Fox|Drama|A young doctor learns the hospital's flaws.
+Grimm|2011|2017|NBC|Fantasy,Crime|A homicide detective is a descendant of Grimm hunters.
+Lost Extras|2004|2010|ABC|Drama,Sci-Fi|
+Alias Extras|2001|2006|ABC|Action,Thriller|
+Revolution Extras|2012|2014|NBC|Sci-Fi,Drama|
+The Event Extras|2010|2011|NBC|Sci-Fi,Thriller|
+Dark Angel Extras|2000|2002|Fox|Sci-Fi,Action|
+Terminator: The Sarah Connor Chronicles|2008|2009|Fox|Sci-Fi,Action|Sarah Connor and her son face new machines.
+Stargate SG-1|1997|2007|Showtime / Syfy|Sci-Fi,Adventure|A military team travels through a ring to other planets.
+Stargate Atlantis|2004|2009|Syfy|Sci-Fi,Adventure|Explorers find a lost city in another galaxy.
+Star Trek: Deep Space Nine|1993|1999|Syndication|Sci-Fi,Drama|Starfleet staff a space station near a wormhole.
+Star Trek: Enterprise|2001|2005|UPN|Sci-Fi,Adventure|The first Starfleet ship's early voyages.
+Star Trek: Discovery|2017|2024|CBS All Access / Paramount+|Sci-Fi,Adventure|A ship fights the Klingon war and travels forward in time.
+Star Trek: Picard|2020|2023|Paramount+|Sci-Fi,Drama|Jean-Luc Picard faces a new threat.
+Star Trek: Strange New Worlds|2022||Paramount+|Sci-Fi,Adventure|Captain Pike's Enterprise before Kirk.
+Star Trek: Lower Decks|2020|2024|Paramount+|Animation,Sci-Fi,Comedy|Support crew members work on Starfleet's least important ship.
+Star Trek: The Original Series|1966|1969|NBC|Sci-Fi,Adventure|Captain Kirk's crew seeks out new life and civilizations.
+The Orville|2017|2022|Fox / Hulu|Sci-Fi,Comedy|A spaceship crew adventure with a comic twist.
+Dark Matter Extras|2024||Apple TV+|Sci-Fi,Thriller|
+Sense8|2015|2018|Netflix|Sci-Fi,Drama|Eight strangers around the world are linked mentally.
+3 Body Problem|2024||Netflix|Sci-Fi,Drama|Scientists confront an alien threat.
+Constellation|2024|2024|Apple TV+|Sci-Fi,Thriller|An astronaut returns to Earth to find her life is different.
+Raised by Wolves|2020|2022|HBO Max|Sci-Fi,Drama|Androids raise humans on a distant planet.
+Colony|2016|2018|USA Network|Sci-Fi,Drama|Humans live under alien occupation in Los Angeles.
+Lost in Space Extras|2018|2021|Netflix|Sci-Fi,Adventure|
+Black Summer|2019|2021|Netflix|Horror,Action|Survivors cross the zombie apocalypse.
+Extant|2014|2015|CBS|Sci-Fi,Drama|An astronaut returns from space with a mysterious pregnancy.
+The Last Ship|2014|2018|TNT|Action,Drama|A Navy ship searches for a pandemic cure.
+Falling Skies|2011|2015|TNT|Sci-Fi,Action|Survivors fight alien invaders.
+Defiance|2013|2015|Syfy|Sci-Fi,Action|A frontier town on an alien-terraformed Earth.
+12 Monkeys Series|2015|2018|Syfy|Sci-Fi,Thriller|A time traveler tries to stop a plague.
+Dollhouse|2009|2010|Fox|Sci-Fi,Drama|People are imprinted with fake personalities for hire.
+Almost Human|2013|2014|Fox|Sci-Fi,Crime|A cop and his android partner.
+Humans Extras|2015|2018|AMC / Channel 4|Sci-Fi,Drama|
+Westworld Extras|2016|2022|HBO|Sci-Fi,Drama|
+Ripley|2024|2024|Netflix|Crime,Thriller|A con man is hired to bring back a rich man's son.
+Monarch: Legacy of Monsters|2023||Apple TV+|Sci-Fi,Action|A family finds secrets of the Monarch organization.
+Alien: Earth|2025||FX|Sci-Fi,Horror|A mission crashes on Earth in the Alien universe.
+Percy Jackson and the Olympians|2023||Disney+|Fantasy,Adventure|A teen discovers he's the son of Poseidon.
+Avatar: The Last Airbender Live Action|2024||Netflix|Fantasy,Adventure|
+Cobra Kai Extras|2018|2025|Netflix|Action,Comedy|
+Heartland|2007||CBC|Drama,Family|A family runs a ranch in Alberta.
+Anne with an E|2017|2019|CBC / Netflix|Drama,Family|An orphan girl discovers life on Prince Edward Island.
+Schitt's Creek Extras|2015|2020|Pop TV|Comedy|
+Letterkenny|2016|2023|Crave|Comedy|Townspeople trade rapid-fire banter in a small town.
+Orange Is the New Black|2013|2019|Netflix|Comedy,Drama|A woman's year inside federal prison.
+Bloodline|2015|2017|Netflix|Drama,Crime|A Florida family's secrets unravel.
+Mindhunter Extras|2017|2019|Netflix|Crime,Drama|
+Narcos: Mexico|2018|2021|Netflix|Crime,Drama|The rise of the Guadalajara cartel.
+Peaky Blinders Extras|2013|2022|BBC|Drama,Crime|
+The Marvelous Mrs. Maisel|2017|2023|Prime Video|Comedy,Drama|A housewife becomes a stand-up comedian in 1950s New York.
+Fleabag Extras|2016|2019|BBC Three|Comedy,Drama|
+Jack Ryan|2018|2023|Prime Video|Action,Thriller|A CIA analyst is pulled into field work.
+The Man in the High Castle|2015|2019|Prime Video|Sci-Fi,Drama|America lives under Axis rule after WWII.
+Hunters Extras|2020|2023|Prime Video|Crime,Thriller|
+Fleishman Is in Trouble|2022|2022|FX / Hulu|Drama|A man's divorce is retold by his friend.
+Dopesick|2021|2021|Hulu|Drama|How the opioid crisis took hold in America.
+The Dropout|2022|2022|Hulu|Drama|The rise and fall of Elizabeth Holmes.
+Pam & Tommy|2022|2022|Hulu|Drama|The theft of a famous couple's private tape.
+Under the Banner of Heaven|2022|2022|FX / Hulu|Crime,Drama|A detective investigates a murder in the Mormon church.
+Candy|2022|2022|Hulu|Crime,Drama|A Texas housewife murders her friend with an axe.
+Welcome to Chippendales|2022|2022|Hulu|Crime,Drama|The founding of the famous club.
+Little Fires Everywhere|2020|2020|Hulu|Drama|A suburban family and a single mother clash.
+Reservation Dogs Extras|2021|2023|FX / Hulu|Comedy,Drama|
+Only Murders Extras|2021||Hulu|Comedy,Mystery|
+The Great|2020|2023|Hulu|Comedy,Drama|A satirical look at Catherine the Great.
+Ramy|2019|2022|Hulu|Comedy,Drama|A Muslim-American millennial seeks spiritual footing.
+Reboot|2022|2023|Hulu|Comedy|The cast of a sitcom reboot confronts the past.
+Death and Other Details|2024|2024|Hulu|Mystery,Drama|A detective investigates a death on a cruise ship.
+Tiny Beautiful Things|2023|2023|Hulu|Drama|A woman finds meaning writing an advice column.
+Mrs. America|2020|2020|FX / Hulu|Drama|The fight over the Equal Rights Amendment.
+The Act|2019|2019|Hulu|Crime,Drama|A mother and daughter's twisted relationship.
+Castle Rock|2018|2019|Hulu|Horror,Mystery|Stephen King stories collide in a small town.
+Light as a Feather|2018|2019|Hulu|Mystery,Thriller|A game turns deadly for a group of teens.
+Love, Victor|2020|2022|Hulu|Romance,Drama|A teen navigates his orientation and family.
+High Fidelity|2020|2020|Hulu|Romance,Comedy|A record-store owner rethinks her heartbreaks.
+Pen15|2019|2021|Hulu|Comedy|Two adult actresses play teen versions of themselves in middle school.
+Fleabag Extras|2016|2019|BBC Three|Comedy,Drama|
+Sharp Objects Extras|2018|2018|HBO|Drama,Mystery|
+Dr. Death|2021|2023|Peacock|Crime,Drama|A deranged surgeon harms patients.
+The Girl from Plainville|2022|2022|Hulu|Crime,Drama|A text-message suicide case in Massachusetts.
+Love & Death|2023|2023|Max|Crime,Drama|A Texas housewife and an axe.
+Fosse/Verdon Extras|2019|2019|FX|Drama|
+American Crime Story|2016||FX|Crime,Drama|True crimes dramatized in anthology form.
+American Horror Stories|2021|2025|FX / Hulu|Horror,Thriller|Stand-alone horror tales.
+Feud|2017||FX|Drama|Rival stars and their legendary fights.
+Monster|2022||Netflix|Crime,Drama|Real-life killers dramatized.
+Dahmer – Monster|2022|2022|Netflix|Crime,Drama|The story of Jeffrey Dahmer's crimes.
+Inventing Anna|2022|2022|Netflix|Drama|A journalist investigates a fake heiress.
+The Staircase|2022|2022|HBO Max|Crime,Drama|A novelist is accused of killing his wife.
+Elsbeth Extras|2024||CBS|Crime,Mystery|
+Matlock|2024||CBS|Drama,Crime|A seasoned lawyer joins a law firm under an alias.
+The Good Fight|2017|2022|CBS All Access / Paramount+|Drama|A lawyer fights in Chicago and Trump's America.
+Suits|2011|2019|USA Network|Drama|A brilliant college dropout works as a lawyer.
+Better Call Saul Extras|2015|2022|AMC|Drama,Crime|
+Boston Legal|2004|2008|ABC|Drama,Comedy|Lawyers push boundaries in a Boston firm.
+Ally McBeal|1997|2002|Fox|Comedy,Drama|A lawyer's life is full of daydreams.
+The Practice|1997|2004|ABC|Drama|Boston defense attorneys fight cases.
+Damages|2007|2012|FX / DirecTV|Drama,Thriller|A young lawyer is manipulated by her mentor.
+Scandal Extras|2012|2018|ABC|Drama,Thriller|
+Madam Secretary|2014|2019|CBS|Drama|The Secretary of State balances family and crises.
+Designated Survivor|2016|2019|ABC / Netflix|Drama,Thriller|A low-level cabinet member becomes president.
+House of Cards Extras|2013|2018|Netflix|Drama,Thriller|
+Veep Extras|2012|2019|HBO|Comedy|
+Homeland Spinoff|2011|2020|Showtime|Drama,Thriller|
+24 Legacy|2017|2017|Fox|Action,Thriller|A former Army Ranger fights terrorism.
+Prison Break Extras|2005|2017|Fox|Action,Drama|
+Strike Back Extras|2010|2020|Cinemax|Action,Thriller|
+Banshee Extras|2013|2016|Cinemax|Action,Crime|
+The Expanse Extras|2015|2022|Syfy|Sci-Fi,Drama|
+Altered Carbon Extras|2018|2020|Netflix|Sci-Fi,Action|
+Jessica Jones|2015|2019|Netflix|Superhero,Crime|A former hero turned private investigator.
+Luke Cage|2016|2018|Netflix|Superhero,Action|A bulletproof man cleans up Harlem.
+Iron Fist|2017|2018|Netflix|Superhero,Action|A martial artist returns to claim his company.
+The Punisher|2017|2019|Netflix|Superhero,Action|A vigilante wages war on crime.
+The Defenders|2017|2017|Netflix|Superhero,Action|Marvel's street heroes unite.
+Agents of S.H.I.E.L.D.|2013|2020|ABC|Superhero,Sci-Fi|Agent Coulson leads a team to protect the world.
+Agent Carter|2015|2016|ABC|Superhero,Drama|Peggy Carter fights post-war threats.
+Inhumans|2017|2017|ABC|Superhero,Sci-Fi|Royals with superpowers flee to Hawaii.
+Legion|2017|2019|FX|Superhero,Sci-Fi|A young man with mental illness has powerful abilities.
+The Gifted|2017|2019|Fox|Superhero,Drama|Mutants on the run protect their families.
+Cloak & Dagger|2018|2019|Freeform|Superhero,Drama|Two teens discover powers together.
+Doom Patrol|2019|2023|DC Universe / HBO Max|Superhero,Comedy|Misfit heroes fight bizarre threats.
+Swamp Thing|2019|2019|DC Universe|Horror,Superhero|A scientist becomes a plant-human creature.
+Stargirl|2020|2022|DC Universe / The CW|Superhero,Drama|A teen takes up the mantle of a hero.
+Pennyworth Extras|2019|2022|Epix|Crime,Drama|
+Superman & Lois|2021|2024|The CW|Superhero,Drama|Clark Kent and Lois Lane balance heroics with parenting.
+The Tick|2016|2019|Prime Video|Superhero,Comedy|A blue superhero and his sidekick patrol the city.
+The Umbrella Academy Extras|2019|2024|Netflix|Superhero,Drama|
+Heroes Extras|2006|2010|NBC|Superhero,Drama|
+Lois & Clark: The New Adventures of Superman|1993|1997|ABC|Superhero,Rom-Com|Two Daily Planet reporters fall in love.
+Wonder Woman|1975|1979|ABC / CBS|Superhero,Action|Diana Prince fights Nazis and criminals.
+The Incredible Hulk|1977|1982|CBS|Superhero,Drama|A scientist transforms into a green monster.
+Batman|1966|1968|ABC|Superhero,Comedy|The Caped Crusader battles campy villains.
+# ---------------------------------------------------------------- reality / competition / talk / documentary
+American Idol|2002||Fox / ABC|Reality|Singers compete for a record deal.
+The Voice|2011||NBC|Reality|Coaches turn chairs for blind auditions.
+America's Got Talent|2006||NBC|Reality|Acts perform for judges and a million dollars.
+Dancing with the Stars Extras|2005||ABC|Reality|
+So You Think You Can Dance|2005|2023|Fox|Reality|Dancers compete across styles.
+Project Runway|2004||Bravo / Lifetime|Reality|Designers compete in weekly challenges.
+Top Chef|2006||Bravo|Reality|Chefs compete in high-stakes challenges.
+Hell's Kitchen|2005||Fox|Reality|Gordon Ramsay trains aspiring chefs.
+MasterChef|2010||Fox|Reality|Home cooks compete for a title.
+Kitchen Nightmares|2007|2014|Fox|Reality|Gordon Ramsay rescues failing restaurants.
+Chopped|2009||Food Network|Reality|Chefs cook with mystery ingredients.
+Iron Chef America|2005|2018|Food Network|Reality|Chefs duel in Kitchen Stadium.
+Guy's Grocery Games|2013||Food Network|Reality|Chefs compete in a supermarket.
+Nailed It!|2018||Netflix|Reality,Comedy|Amateur bakers recreate elaborate cakes.
+The Great British Baking Show Extras|2010||BBC|Reality,Comedy|
+The Amazing Race|2001||CBS|Reality,Adventure|Teams race around the world.
+Big Brother|2000||CBS|Reality|Housemates are voted out one by one.
+The Bachelor|2002||ABC|Reality,Romance|A man chooses among many women.
+The Bachelorette|2003||ABC|Reality,Romance|A woman picks from many suitors.
+Love Island USA|2019||CBS / Peacock|Reality,Romance|Singles couple up in a villa.
+Love Is Blind|2020||Netflix|Reality,Romance|Singles date without seeing each other.
+Too Hot to Handle|2020|2025|Netflix|Reality,Romance|Singles try not to hook up.
+The Circle|2020||Netflix|Reality|Contestants rate each other from isolated apartments.
+Selling Sunset|2019||Netflix|Reality|Real estate agents sell in Los Angeles.
+Queer Eye|2018||Netflix|Reality,Comedy|Five men give makeovers to people in need.
+Making It|2018|2021|NBC|Reality|Crafters compete in challenges.
+Shark Tank|2009||ABC|Reality|Entrepreneurs pitch investors.
+The Apprentice|2004|2017|NBC|Reality|Contestants compete for a job.
+Fear Factor|2001|2012|NBC|Reality|Contestants face fears and stunts.
+Wipeout|2008|2014|ABC|Reality,Comedy|Contestants try a wild obstacle course.
+American Ninja Warrior|2009||NBC|Reality|Athletes try an extreme obstacle course.
+Naked and Afraid|2013||Discovery|Reality,Adventure|Two strangers survive naked in the wild.
+Deadliest Catch|2005||Discovery|Reality,Documentary|Crab fishermen brave the Bering Sea.
+Dirty Jobs|2005|2012|Discovery|Reality,Documentary|Mike Rowe tries the dirtiest jobs.
+MythBusters|2003|2018|Discovery|Reality,Documentary|Experts test popular myths.
+Storage Wars|2010||A&E|Reality|Buyers bid on storage unit contents.
+Pawn Stars|2009||History|Reality|A family-run pawn shop in Las Vegas.
+American Pickers|2010||History|Reality|Two guys scour the country for antiques.
+Antiques Roadshow|1997||PBS|Reality|Experts appraise guests' treasures.
+Property Brothers|2011||HGTV|Reality|Twin brothers renovate houses.
+Fixer Upper|2013|2018|HGTV|Reality|A couple renovates houses in Waco.
+Love It or List It|2008||HGTV|Reality|Homeowners decide to renovate or move.
+Queer Eye Extras|2018||Netflix|Reality|
+Keeping Up with the Kardashians|2007|2021|E!|Reality|The Kardashian family's life is filmed.
+The Kardashians|2022||Hulu|Reality|The family returns to streaming.
+The Real Housewives of Beverly Hills|2010||Bravo|Reality|Wealthy women in Beverly Hills.
+The Real Housewives of Atlanta|2008||Bravo|Reality|Women in Atlanta share their lives.
+Jersey Shore|2009|2012|MTV|Reality|Housemates party at the Jersey Shore.
+The Hills|2006|2010|MTV|Reality|Friends in Los Angeles chase careers and love.
+Laguna Beach|2004|2006|MTV|Reality|Teens live in Orange County.
+The Real World|1992|2017|MTV|Reality|Strangers share a house.
+Survivor Extras|2000||CBS|Reality|
+The Challenge|1998||MTV|Reality|Reality alumni compete for cash.
+Vanderpump Rules|2013||Bravo|Reality|Staff of a West Hollywood restaurant.
+Below Deck|2013||Bravo|Reality|A yacht crew works for demanding guests.
+Teen Mom|2009||MTV|Reality|Teens raise their babies.
+Dance Moms|2011|2019|Lifetime|Reality|Mothers push their daughters in dance.
+Duck Dynasty|2012|2017|A&E|Reality|The Robertson family and their duck-call business.
+Keeping Up Extras|2007|2021|E!|Reality|
+The Osbournes|2002|2005|MTV|Reality,Comedy|Ozzy Osbourne's family at home.
+Punk'd|2003|2012|MTV|Reality,Comedy|Celebs are pranked by hidden cameras.
+Jackass|2000|2002|MTV|Reality,Comedy|Friends perform dangerous stunts.
+Impractical Jokers|2011||truTV|Reality,Comedy|Friends dare each other to do embarrassing things.
+Whose Line Is It Anyway?|1998|2007|ABC|Comedy|Improv comedians play games.
+Saturday Night Live|1975||NBC|Comedy|Live sketch comedy from New York.
+Mad TV Extras|1995|2016|Fox|Comedy|
+In Living Color|1990|1994|Fox|Comedy|A sketch comedy starring the Wayans family.
+Key & Peele|2012|2015|Comedy Central|Comedy|Two comedians perform sketches.
+Chappelle's Show|2003|2006|Comedy Central|Comedy|Dave Chappelle's sketch show.
+Portlandia|2011|2018|IFC|Comedy|Sketches about Portland's quirks.
+I Think You Should Leave with Tim Robinson|2019||Netflix|Comedy|Absurd sketches about embarrassing moments.
+The Daily Show|1996||Comedy Central|Comedy|Satirical news.
+Last Week Tonight with John Oliver|2014||HBO|Comedy|Weekly satirical news.
+The Colbert Report|2005|2014|Comedy Central|Comedy|Stephen Colbert plays a pundit.
+The Late Show with Stephen Colbert|2015|2026|CBS|Comedy|Late-night talk show.
+The Tonight Show Starring Jimmy Fallon|2014||NBC|Comedy|Late-night talk show.
+Jimmy Kimmel Live!|2003||ABC|Comedy|Late-night talk show.
+Late Night with Seth Meyers|2014||NBC|Comedy|Late-night talk show.
+The Ellen DeGeneres Show|2003|2022|Syndication|Comedy|Daytime talk show.
+The Oprah Winfrey Show|1986|2011|Syndication|Documentary|Daytime talk show.
+Jeopardy!|1984||Syndication|Reality|Contestants answer clues in the form of questions.
+Wheel of Fortune|1983||Syndication|Reality|Contestants solve word puzzles.
+Who Wants to Be a Millionaire|1999||ABC|Reality|Contestants answer questions for money.
+Family Feud|1976||Syndication|Reality|Families guess survey answers.
+The Price Is Right|1972||CBS|Reality|Contestants guess prices.
+Deal or No Deal|2005|2010|NBC|Reality|Contestants pick briefcases.
+Let's Make a Deal|2009||CBS|Reality|Contestants trade for prizes.
+60 Minutes|1968||CBS|Documentary|The long-running CBS television newsmagazine of investigative reports and interviews.
+Cosmos: A Personal Voyage|1980|1980|PBS|Documentary|Carl Sagan explores the universe.
+Planet Earth III|2023|2023|BBC One|Documentary|The planet's wildlife and habitats.
+Frozen Planet|2011|2011|BBC One|Documentary|The polar regions' wildlife.
+Life on Our Planet|2023|2023|Netflix|Documentary|The history of life on Earth.
+Our Great National Parks|2022|2022|Netflix|Documentary|Wildlife in American national parks.
+Free Solo Extras|2018|2018|National Geographic|Documentary|
+Drive to Survive|2019||Netflix|Documentary|Behind the scenes of Formula 1.
+Full Swing|2023|2024|Netflix|Documentary|Golfers on the PGA Tour.
+Break Point|2023|2024|Netflix|Documentary|Tennis stars on the tour.
+Quarterback|2023|2024|Netflix|Documentary|NFL quarterbacks over a season.
+All or Nothing|2016||Prime Video|Documentary|Sports teams followed for a season.
+Hard Knocks Extras|2001||HBO|Documentary|
+The Last Dance Extras|2020|2020|ESPN|Documentary|
+30 for 30|2009||ESPN|Documentary|Sports documentary stories.
+The Vietnam War Extras|2017|2017|PBS|Documentary,War|
+The Civil War|1990|1990|PBS|Documentary,War|Ken Burns on the American Civil War.
+Baseball|1994|1994|PBS|Documentary|Ken Burns's baseball history.
+The Roosevelts|2014|2014|PBS|Documentary|Ken Burns on the Roosevelt family.
+Making a Murderer Extras|2015|2018|Netflix|Documentary,Crime|
+The Staircase Documentary|2004|2018|Canal+ / Netflix|Documentary,Crime|A novelist is tried for murder.
+Don't F**k with Cats|2019|2019|Netflix|Documentary,Crime|Online sleuths hunt a killer.
+Cheer|2020|2022|Netflix|Documentary|A Texas junior-college cheer team.
+Tiger King Extras|2020|2021|Netflix|Documentary,Crime|
+The Social Dilemma|2020|2020|Netflix|Documentary|Tech insiders warn about social media.
+Abducted in Plain Sight|2017|2017|Netflix|Documentary,Crime|
+Unsolved Mysteries|1987||NBC / CBS / Netflix|Documentary,Mystery|Real-life mysteries and disappearances.
+Dateline NBC|1992||NBC|Documentary,Crime|True-crime news stories.
+Forensic Files|1996|2011|truTV|Documentary,Crime|Forensic scientists solve cases.
+Cold Case Files|1999|2017|A&E|Documentary,Crime|Detectives revisit unsolved cases.
+Mindhunter Docs|2017|2019|Netflix|Crime,Drama|
+The Staircase Extras|2022|2022|HBO Max|Crime,Drama|
+Surviving R. Kelly|2019|2019|Lifetime|Documentary,Crime|
+Leaving Neverland|2019|2019|HBO|Documentary|
+The Vow|2020|2022|HBO|Documentary,Crime|
+The Tinder Swindler Series|2022|2022|Netflix|Documentary,Crime|
+The Dropout Extras|2022|2022|Hulu|Drama|
+WeCrashed|2022|2022|Apple TV+|Drama|The rise and fall of WeWork.
+Super Pumped|2022|2022|Showtime|Drama|The story of Uber's founder.
+The Girl in the Picture Series|2022|2022|Netflix|Documentary,Crime|
+Tiger Woods Documentary|2021|2021|HBO|Documentary|
+Bad Vegan|2022|2022|Netflix|Documentary,Crime|
+The Menu Series|2023|2023|Netflix|Documentary|
+# ---------------------------------------------------------------- streaming-era comedies & dramas
+Fleabag Series|2016|2019|BBC Three|Comedy,Drama|
+Sweet Magnolias|2020||Netflix|Drama,Romance|Three friends support each other in a small South Carolina town.
+Virgin River|2019||Netflix|Drama,Romance|A nurse starts a new life in a Northern California town.
+Outer Banks|2020||Netflix|Adventure,Drama|Teens hunt treasure in the Outer Banks.
+Ginny & Georgia|2021||Netflix|Drama,Comedy|A young mother and her teen daughter begin a new life.
+The Summer I Turned Pretty|2022|2025|Prime Video|Romance,Drama|A teen's coming-of-age summers at a beach house.
+Never Have I Ever Extras|2020|2023|Netflix|Comedy,Drama|
+XO, Kitty|2023||Netflix|Rom-Com,Drama|Kitty Song Covey follows her crush to Korea.
+To All the Boys: Always and Forever Series|2018|2021|Netflix|Rom-Com|
+Firefly Lane|2021|2023|Netflix|Drama,Romance|Two friends from the 1970s weather life.
+Maid|2021|2021|Netflix|Drama|A young mother escapes an abusive partner.
+Selling the OC|2022||Netflix|Reality|Real estate brokers sell luxury homes in Orange County.
+The Diplomat Extras|2023||Netflix|Thriller|
+Dead Boy Detectives|2024|2024|Netflix|Fantasy,Mystery|Two teen ghosts solve supernatural mysteries.
+Lockwood & Co.|2023|2023|Netflix|Fantasy,Mystery|Teens fight ghosts in an alternate London.
+Based on a True Story|2023|2024|Peacock|Comedy,Crime|A couple tries to cash in on a true-crime podcast.
+The Bear Extras|2022||FX|Drama,Comedy|
+Hello Tomorrow!|2023|2023|Apple TV+|Sci-Fi,Drama|Salesmen sell the moon.
+The Studio|2025||Apple TV+|Comedy|A new studio head fights for movies.
+Shrinking Extras|2023||Apple TV+|Comedy,Drama|
+Platonic|2023|2025|Apple TV+|Comedy|Two former friends reconnect in midlife.
+Bad Monkey|2024|2024|Apple TV+|Crime,Comedy|A former detective gets pulled into a murder case.
+Presumed Innocent|2024||Apple TV+|Crime,Drama|A prosecutor is accused of murder.
+Pachinko|2022||Apple TV+|Drama|A multigenerational saga of a Korean family.
+Slow Horses Extras|2022||Apple TV+|Thriller|
+Silo Extras|2023||Apple TV+|Sci-Fi|
+Foundation Extras|2021||Apple TV+|Sci-Fi|
+Mythic Quest|2020|2025|Apple TV+|Comedy|A video-game studio runs through chaos.
+The Morning Show|2019||Apple TV+|Drama|A network morning show is rocked by scandal.
+Servant|2019|2023|Apple TV+|Horror,Thriller|A couple grieves their baby while a nanny arrives.
+See|2019|2022|Apple TV+|Sci-Fi,Action|Humans have lost sight, and a pair of twins might see.
+Dickinson|2019|2021|Apple TV+|Comedy,Drama|Emily Dickinson's early years.
+Physical|2021|2023|Apple TV+|Comedy,Drama|A housewife finds aerobics in 1980s San Diego.
+Black Bird|2022|2022|Apple TV+|Crime,Drama|A convict gets a deal to befriend a serial killer.
+Tehran|2020|2025|Apple TV+|Thriller|A Mossad agent gets trapped in Iran.
+Lessons in Chemistry|2023|2023|Apple TV+|Drama,Comedy|A 1960s chemist becomes a TV chef.
+Masters of the Air|2024|2024|Apple TV+|War,Drama|Airmen in the Eighth Air Force in WWII.
+The Afterparty|2022|2023|Apple TV+|Comedy,Mystery|A murder at a high-school reunion.
+Palm Royale|2024||Apple TV+|Comedy,Drama|A social climber in 1969 Palm Beach.
+Acapulco|2021||Apple TV+|Comedy|A young man works at a luxury resort in 1984.
+Prime Target|2025|2025|Apple TV+|Thriller|A mathematician stumbles on a secret.
+Government Cheese|2024||Apple TV+|Comedy|
+Bosch Extras|2014|2021|Prime Video|Crime|
+The Wheel of Time|2021|2025|Prime Video|Fantasy,Adventure|A group leaves home to find the Dragon Reborn.
+Citadel|2023|2023|Prime Video|Action,Thriller|Rival spies fight for a secret organization.
+Gen V|2023|2025|Prime Video|Superhero,Action|Students at a superhero college.
+The Terminal List Extras|2022||Prime Video|Thriller|
+We Were the Lucky Ones|2024|2024|Hulu|Drama,War|A Jewish family separated by WWII.
+Hijack|2023|2025|Apple TV+|Thriller|A man tries to survive a hijacked flight.
+The Mist|2017|2017|Spike|Horror|A fog envelops a small town.
+Lodge 49|2018|2019|AMC|Comedy,Drama|A drifter becomes a member of a lodge.
+Dispatches Extras|2020|2020|AMC|Drama|
+Evil|2019|2024|CBS / Paramount+|Horror,Mystery|A psychologist and a priest investigate cases.
+Servant Extras|2019|2023|Apple TV+|Horror|
+Bates Motel Extras|2013|2017|A&E|Horror|
+Haunting of Bly Manor|2020|2020|Netflix|Horror,Drama|A governess cares for two children in a haunted manor.
+The Fall of the House of Usher|2023|2023|Netflix|Horror,Drama|A pharma dynasty is haunted by death.
+The Midnight Club|2022|2022|Netflix|Horror,Mystery|Terminally ill teens tell scary stories.
+Wednesday Extras|2022||Netflix|Comedy,Fantasy|
+Locke & Key|2020|2022|Netflix|Fantasy,Horror|Three siblings discover magical keys.
+Fate: The Winx Saga|2021|2022|Netflix|Fantasy,Drama|Fairies train at a magical boarding school.
+The Order|2019|2020|Netflix|Fantasy,Horror|A student joins a secret order.
+Cursed|2020|2020|Netflix|Fantasy,Adventure|Nimue wields the Sword of Power.
+The Mist Extras|2017|2017|Spike|Horror|
+Fear Street Series|2021|2021|Netflix|Horror|
+Goosebumps Series|2023|2025|Disney+ / Hulu|Horror,Kids|Teens face monsters inspired by R.L. Stine.
+Are You Afraid of the Dark?|1990|2000|Nickelodeon|Horror,Kids|Kids tell scary stories around a campfire.
+Tales from the Crypt|1989|1996|HBO|Horror|The Crypt Keeper presents macabre stories.
+The Outer Limits|1995|2002|Showtime / Syfy|Sci-Fi,Horror|Anthology of science-fiction stories.
+Creepshow|2019|2023|Shudder|Horror|Anthology of horror stories.
+Black Mirror Extras|2011||Netflix|Sci-Fi|
+Black Mirror Anthology|2011||Netflix|Sci-Fi,Thriller|
+Love, Death & Robots Extras|2019||Netflix|Animation,Sci-Fi|
+Electric Dreams|2017|2018|Amazon / Channel 4|Sci-Fi,Drama|Philip K. Dick-based anthology.
+Amazing Stories Reboot|2020|2020|Apple TV+|Sci-Fi,Fantasy|
+Tales from the Loop|2020|2020|Prime Video|Sci-Fi,Drama|Residents of a town with strange technology.
+Years and Years Extras|2019|2019|BBC One / HBO|Sci-Fi,Drama|
+Utopia|2013|2014|Channel 4|Thriller,Mystery|
+Misfits Extras|2009|2013|E4|Sci-Fi,Comedy|
+Black Books|2000|2004|Channel 4|Comedy|A bookshop owner is unhelpful to customers.
+The IT Crowd|2006|2013|Channel 4|Comedy|Tech support in a basement.
+Fawlty Towers|1975|1979|BBC Two|Comedy|A hotel owner mishandles guests.
+Monty Python's Flying Circus|1969|1974|BBC One|Comedy|Surreal sketches by a legendary troupe.
+Blackadder|1983|1989|BBC One|Comedy|A scheming Blackadder lives through British history.
+Father Ted|1995|1998|Channel 4|Comedy|Three priests exiled to a remote island.
+The Office UK|2001|2003|BBC Two|Comedy|The original mockumentary of a paper company.
+Extras|2005|2007|BBC Two|Comedy|An extra tries to get a big part.
+Peep Show|2003|2015|Channel 4|Comedy|Two flatmates and their inner thoughts.
+Gavin & Stacey|2007|2024|BBC Three / BBC One|Comedy|A couple from different countries and their families.
+Derry Girls|2018|2022|Channel 4|Comedy|Teens in 1990s Northern Ireland.
+Ted Lasso Extras|2020|2023|Apple TV+|Comedy|
+Inside No. 9|2014|2024|BBC Two|Comedy,Horror|Anthology of dark comedies in different settings.
+Taskmaster|2015||Dave|Comedy,Reality|Comedians complete silly tasks.
+QI|2003||BBC|Comedy|Quirky quiz show.
+Top Gear|2002||BBC Two|Reality,Comedy|Cars and banter.
+The Grand Tour|2016|2024|Prime Video|Reality,Comedy|The Top Gear hosts take on new adventures.
+Downton Abbey Extras|2010|2015|ITV|Drama|
+The Crown Extras|2016|2023|Netflix|Drama|
+Bridgerton Extras|2020||Netflix|Romance,Drama|
+Call the Midwife|2012||BBC One|Drama|Midwives in 1950s East London.
+Poldark|2015|2019|BBC One|Drama,Romance|A soldier returns to Cornwall.
+Victoria|2016|2019|ITV|Drama|The early years of Queen Victoria.
+The Tudors|2007|2010|Showtime|Drama,Romance|The reign of King Henry VIII.
+Vikings|2013|2020|History|Action,Drama|A farmer becomes a Viking leader.
+The Last Kingdom Extras|2015|2022|BBC / Netflix|Drama,War|
+Outlander Extras|2014||Starz|Drama,Romance|
+Black Sails|2014|2017|Starz|Adventure,Drama|Pirates before Treasure Island.
+Spartacus Extras|2010|2013|Starz|Action,Drama|
+Power|2014|2020|Starz|Crime,Drama|A drug lord tries to go legit.
+Power Book II: Ghost|2020|2024|Starz|Crime,Drama|Tariq St. Patrick's story continues.
+Outlander: Blood of My Blood|2025||Starz|Drama,Romance|Prequel about Jamie's and Claire's parents.
+The White Queen|2013|2013|BBC One / Starz|Drama|The Wars of the Roses.
+Da Vinci's Demons|2013|2015|Starz|Drama,Adventure|A young Leonardo da Vinci.
+Ash vs Evil Dead|2015|2018|Starz|Horror,Comedy|Ash returns to fight demons.
+Counterpart|2017|2019|Starz|Sci-Fi,Thriller|A spy in a parallel world.
+The Girlfriend Experience|2016|2021|Starz|Drama|Women navigate a world of high-end escorts.
+Party Down|2009|2023|Starz|Comedy|A catering crew of Hollywood hopefuls.
+Vida|2018|2020|Starz|Drama|Sisters return to their Latino neighborhood.
+Gangs of London|2020||Sky / AMC+|Crime,Action|A crime family war in London.
+Sherlock Extras|2010|2017|BBC One|Crime|
+The Night Manager Series|2016||BBC One / Prime Video|Thriller|
+Fleabag Cast Extras|2016|2019|BBC Three|Comedy|
+Killing Eve Extras 2|2018|2022|BBC America|Thriller|
+The Responder|2022|2023|BBC One|Crime,Drama|A Liverpool cop struggles with insomnia.
+Slow Horses Series|2022||Apple TV+|Thriller|
+Baby Reindeer|2024|2024|Netflix|Drama,Thriller|A comedian is stalked by a woman.
+Adolescence|2025|2025|Netflix|Drama,Crime|A boy accused of murder; each episode in one take.
+Death in Paradise|2011||BBC One|Crime,Mystery|A British detective solves crimes in the Caribbean.
+Midsomer Murders|1997||ITV|Crime,Mystery|A detective solves murders in English villages.
+Agatha Christie's Poirot|1989|2013|ITV|Crime,Mystery|The Belgian detective solves cases.
+Miss Marple|2004|2013|ITV|Crime,Mystery|An elderly sleuth solves murders.
+Endeavour|2012|2023|ITV|Crime,Mystery|A young Inspector Morse in 1960s Oxford.
+Vera|2011|2025|ITV|Crime,Drama|A detective investigates murders in Northumberland.
+Shetland|2013|2024|BBC One|Crime,Mystery|A detective in the Shetland Islands.
+Peaky Blinders Series|2013|2022|BBC|Crime,Drama|
+Top Boy|2011|2023|Channel 4 / Netflix|Crime,Drama|Gangs in East London.
+Black Mirror Series|2011||Netflix|Sci-Fi|
+Dark Series|2017|2020|Netflix|Sci-Fi|
+Money Heist Series|2017|2021|Netflix|Crime|
+Narcos Series|2015|2017|Netflix|Crime|
+Squid Game Series|2021|2025|Netflix|Thriller|
+Lupin Series|2021||Netflix|Crime|
+Emily in Paris Series|2020||Netflix|Rom-Com|
+Alice in Borderland Series|2020|2025|Netflix|Sci-Fi|
+Kaos|2024|2024|Netflix|Fantasy,Comedy|Greek gods fight a new prophecy.
+Beef Series|2023||Netflix|Drama|
+Physical Series|2021|2023|Apple TV+|Comedy|
+Hannibal Series|2013|2015|NBC|Horror|
+# ---------------------------------------------------------------- classic network TV (broad American recognition)
+I Love Lucy|1951|1957|CBS|Comedy|A zany redhead schemes for stardom.
+The Honeymooners|1955|1956|CBS|Comedy|A bus driver's get-rich-quick schemes.
+The Andy Griffith Show|1960|1968|CBS|Comedy,Family|A small-town sheriff keeps the peace.
+Leave It to Beaver|1957|1963|CBS / ABC|Comedy,Family|A boy's suburban mishaps.
+Bewitched|1964|1972|ABC|Comedy,Fantasy|A witch marries a mortal.
+I Dream of Jeannie|1965|1970|NBC|Comedy,Fantasy|An astronaut lives with a genie.
+The Brady Bunch|1969|1974|ABC|Comedy,Family|Two families merge into one.
+The Partridge Family|1970|1974|ABC|Comedy,Family|A family band tours.
+All in the Family|1971|1979|CBS|Comedy|A bigoted dad clashes with his family.
+The Mary Tyler Moore Show|1970|1977|CBS|Comedy|A single woman works in a newsroom.
+The Jeffersons|1975|1985|CBS|Comedy|A Black family moves on up.
+Happy Days|1974|1984|ABC|Comedy,Family|A 1950s Milwaukee teen and the Fonz.
+Laverne & Shirley|1976|1983|ABC|Comedy|Two roommates work at a brewery.
+Taxi|1978|1983|ABC / NBC|Comedy|Cab drivers dream of something more.
+Three's Company|1977|1984|ABC|Comedy|Misunderstandings between roommates.
+Diff'rent Strokes|1978|1986|NBC / ABC|Comedy,Family|Two orphans are adopted by a rich man.
+The Facts of Life|1979|1988|NBC|Comedy,Family|Girls at a boarding school.
+Growing Pains|1985|1992|ABC|Comedy,Family|A psychiatrist dad works at home.
+Who's the Boss?|1984|1992|ABC|Comedy,Family|A housekeeper works for a divorcée.
+Family Ties|1982|1989|NBC|Comedy,Family|A 60s-hippie couple has a conservative son.
+Night Court|1984|1992|NBC|Comedy|A late-night judge tries to keep order.
+Murphy Brown|1988|1998|CBS|Comedy|A TV journalist is outspoken.
+Coach|1989|1997|ABC|Comedy|A football coach and his life.
+Newhart|1982|1990|CBS|Comedy|An innkeeper deals with Vermont locals.
+Designing Women|1986|1993|CBS|Comedy|Interior designers in Atlanta.
+The Wonder Years|1988|1993|ABC|Comedy,Drama|A boy grows up in 1960s suburbia.
+Quantum Leap Original|1989|1993|NBC|Sci-Fi,Drama|A scientist leaps through time to correct history.
+MacGyver Original|1985|1992|ABC|Action,Adventure|A secret agent uses science to solve problems.
+Magnum, P.I.|1980|1988|CBS|Action,Crime|A private eye lives in Hawaii.
+The A-Team|1983|1987|NBC|Action,Comedy|Ex-soldiers help the helpless.
+Knight Rider Original|1982|1986|NBC|Action,Sci-Fi|A man and his talking car fight crime.
+Miami Vice|1984|1990|NBC|Crime,Drama|Two undercover detectives in Miami.
+Cagney & Lacey|1981|1988|CBS|Crime,Drama|Two female detectives in New York.
+Murder, She Wrote|1984|1996|CBS|Mystery,Crime|A mystery writer solves murders.
+Moonlighting|1985|1989|ABC|Comedy,Mystery|Detective partners spar.
+The Love Boat|1977|1987|ABC|Comedy,Romance|Passengers' stories on a cruise ship.
+Fantasy Island|1977|1984|ABC|Fantasy,Drama|Guests' fantasies come true.
+Charlie's Angels Original|1976|1981|ABC|Action,Crime|
+The Dukes of Hazzard Extras|1979|1985|CBS|Comedy|
+CHiPs|1977|1983|NBC|Action,Comedy|Two motorcycle cops patrol California.
+Baywatch|1989|2001|NBC / Syndication|Action,Drama|Lifeguards on a Los Angeles beach.
+Walker, Texas Ranger|1993|2001|CBS|Action,Crime|A modern-day Texas Ranger.
+Touched by an Angel|1994|2003|CBS|Fantasy,Drama|Angels help people in need.
+Little House on the Prairie|1974|1983|NBC|Drama,Family|A pioneer family on the plains.
+The Waltons|1972|1981|CBS|Drama,Family|A Depression-era family in Virginia.
+7th Heaven|1996|2007|The WB / The CW|Drama,Family|A minister's family faces life's challenges.
+Everwood|2002|2006|The WB|Drama,Family|A New York surgeon moves to a small town.
+Gilmore Girls Reboot|2016|2016|Netflix|Drama,Comedy|
+Party of Five|1994|2000|Fox|Drama|Orphaned siblings keep their family together.
+My So-Called Life|1994|1995|ABC|Drama|A teen tries to understand her world.
+Freaks and Geeks|1999|2000|NBC|Comedy,Drama|Misfit teens in 1980 Michigan.
+Veronica Mars|2004|2019|UPN / The CW / Hulu|Mystery,Drama|A teen detective solves cases in a rich town.
+Buffy Extras|1997|2003|The WB|Fantasy|
+Dark Shadows Original|1966|1971|ABC|Horror,Drama|A gothic soap about vampires.
+The Addams Family|1964|1966|ABC|Comedy,Horror|A creepy family live as if normal.
+The Munsters|1964|1966|CBS|Comedy,Horror|A monster family in suburbia.
+Gilligan's Island|1964|1967|CBS|Comedy|Castaways on a deserted island.
+The Beverly Hillbillies|1962|1971|CBS|Comedy|A poor family strikes oil.
+Green Acres|1965|1971|CBS|Comedy|A lawyer moves to a farm.
+Get Smart|1965|1970|NBC / CBS|Comedy,Action|A bumbling secret agent.
+Hogan's Heroes|1965|1971|CBS|Comedy,War|Prisoners in a German camp.
+The Twilight Zone Original|1959|1964|CBS|Sci-Fi|
+Bonanza|1959|1973|NBC|Western|The Cartwright family on the Ponderosa.
+Gunsmoke|1955|1975|CBS|Western|A marshal keeps the peace in Dodge City.
+Rawhide|1959|1965|CBS|Western|Cowboys drive cattle.
+The Lone Ranger|1949|1957|ABC|Western|A masked lawman rides with Tonto.
+The Rifleman|1958|1963|ABC|Western|A widower raises his son.
+Wagon Train|1957|1965|NBC / ABC|Western|Pioneers travel west.
+Perry Mason Original|1957|1966|CBS|Crime,Drama|
+Dragnet|1951|1959|NBC|Crime,Drama|A cop reports the facts.
+The Fugitive Original|1963|1967|ABC|Crime,Drama|
+Mission: Impossible Original|1966|1973|CBS|Action|
+Star Trek Original|1966|1969|NBC|Sci-Fi|
+Kojak|1973|1978|CBS|Crime,Drama|A New York cop with a lollipop.
+Starsky & Hutch|1975|1979|ABC|Action,Crime|Two cops in a red Torino.
+The Six Million Dollar Man|1974|1978|ABC|Sci-Fi,Action|An astronaut gets bionic parts.
+The Bionic Woman|1976|1978|ABC / NBC|Sci-Fi,Action|A tennis pro is rebuilt.
+The Rockford Files Original|1974|1980|NBC|Crime|
+Hart to Hart|1979|1984|ABC|Mystery,Romance|A wealthy couple solves mysteries.
+Dallas Reboot|2012|2014|TNT|Drama|
+Knots Landing|1979|1993|CBS|Drama|A cul-de-sac drama.
+Falcon Crest|1981|1990|CBS|Drama|A wine-making family battles.
+St. Elsewhere|1982|1988|NBC|Drama|Doctors and staff at a run-down Boston teaching hospital.
+L.A. Law|1986|1994|NBC|Drama|A Los Angeles law firm.
+thirtysomething|1987|1991|ABC|Drama|Friends in their thirties.
+Cheers Extras|1982|1993|NBC|Comedy|
+The Cosby Show Extras|1984|1992|NBC|Comedy|
+# ---------------------------------------------------------------- 2020s new releases
+Reacher Extras|2022||Prime Video|Action|
+Squid Game Extras|2021|2025|Netflix|Thriller|
+The Last of Us Extras|2023||HBO|Drama,Horror|
+The Diplomat|2023||Netflix|Thriller,Drama|A US ambassador in London faces a crisis.
+Lioness|2023|2025|Paramount+|Thriller,Action|A CIA operative recruits a Marine.
+Special Ops: Lioness|2023||Paramount+|Thriller|
+Fallout Extras|2024||Prime Video|Sci-Fi|
+Dexter: Original Sin|2024|2025|Paramount+ / Showtime|Crime,Drama|A young Dexter becomes a killer.
+Dexter: Resurrection|2025||Paramount+ / Showtime|Crime,Drama|Dexter returns to New York.
+Paradise|2025||Hulu|Thriller,Drama|A Secret Service agent investigates in a perfect town.
+Severance Season|2022||Apple TV+|Sci-Fi|
+The Last Frontier|2026||Apple TV+|Drama|
+Task|2025||HBO|Crime,Drama|An FBI task force fights a violent biker gang.
+Pluribus|2025||Apple TV+|Sci-Fi|A scientist's world changes after an alien signal.
+The Studio Extras|2025||Apple TV+|Comedy|
+Mobland|2025||Paramount+|Crime,Drama|A mob fixer protects his family.
+Ironheart Extras|2025||Disney+|Superhero|
+The Four Seasons|2025||Netflix|Comedy,Drama|Three couples vacation together.
+Sirens|2025|2025|Netflix|Comedy,Drama|A woman tries to save her sister from a billionaire.
+Mrs. Davis Extras|2023||Peacock|Comedy|
+Abbott Extras|2021||ABC|Comedy|
+Ghosts Extras|2021||CBS|Comedy|
+High Potential|2024||ABC|Crime,Drama|A mother with a genius IQ helps the LAPD.
+Tracker|2024||CBS|Action,Crime|A loner finds missing people for rewards.
+Fire Country|2022||CBS|Drama|A convict fights fires to cut his sentence.
+Doc|2025||Fox|Drama|A doctor loses her memory and finds help.
+Grosse Pointe Garden Society|2025||NBC|Mystery|
+Elsbeth|2024||CBS|Crime,Comedy|A quirky lawyer solves New York murders.
+Found|2023|2025|NBC|Crime,Drama|A missing-persons expert has a secret.
+Will Trent|2023||ABC|Crime,Drama|A GBI agent solves crimes with dyslexia.
+Wicked City Extras|2015|2015|ABC|Crime|
+The Equalizer Extras|2021|2025|CBS|Action|
+Dr. Odyssey|2023|2023|ABC|Drama|
+Bob Hearts Extras|2019|2024|CBS|Comedy|
+Ghosts UK|2019|2023|BBC One|Comedy,Fantasy|
+The Wilds|2020|2022|Prime Video|Drama,Mystery|Teen girls survive a plane crash on an island.
+Panic|2021|2021|Prime Video|Drama,Thriller|Teens compete in a deadly game.
+Daisy Jones Extras|2023|2023|Prime Video|Drama|
+The Peripheral|2022|2022|Prime Video|Sci-Fi|
+The Rig|2023|2025|Prime Video|Thriller|
+Hanna Extras|2019|2021|Prime Video|Action|
+Hanna Series|2019|2021|Prime Video|Action,Thriller|
+Fleabag Extras 3|2016|2019|BBC Three|Comedy|
+Mr. & Mrs. Smith Series|2024||Prime Video|Action,Comedy|Two strangers become spies and husband and wife.
+The Boys Presents: Diabolical|2022|2022|Prime Video|Animation,Superhero,Adult|
+Vox Machina Extras|2022||Prime Video|Animation|
+Batman: Caped Crusader|2024|2025|Prime Video|Animation,Superhero|A darker, noir Batman.
+My Adventures with Superman|2023||Adult Swim|Animation,Superhero,Kids|
+Invincible Extras|2021||Prime Video|Animation|
+Blue Beetle Extras|2023|2023|Max|Animation|
+Solar Opposites|2020||Hulu|Animation,Comedy,Adult|Aliens live in suburbia.
+Rick and Morty: The Anime|2024||Adult Swim|Animation,Sci-Fi,Adult|
+Hazbin Hotel|2024||Prime Video|Animation,Comedy,Adult|The Princess of Hell runs a redemption hotel.
+Helluva Boss|2019||YouTube|Animation,Comedy,Adult|Imps run a business in Hell.
+The Simpsons Extras|1989||Fox|Animation,Comedy|
+Bob's Burgers Extras|2011||Fox|Animation,Comedy|
+The Great North|2021||Fox|Animation,Comedy|A family lives in Alaska.
+Duncanville|2020|2022|Fox|Animation,Comedy|A teen dealing with life.
+Central Park|2020|2022|Apple TV+|Animation,Comedy,Musical|A family lives in Central Park.
+Hamster & Gretel|2022|2023|Disney Channel|Animation,Superhero,Kids|
+Bluey Series|2018||ABC Kids|Animation,Family,Kids|
+Ghosts of Ruby Bridge|2025||Peacock|Drama|
+Wolf Pack|2023|2023|Paramount+|Fantasy,Drama|Teens become werewolves.
+Wolf Like Me|2022|2023|Peacock|Rom-Com,Fantasy|A werewolf falls in love.
+The Midnight Gospel Extras|2020|2020|Netflix|Animation|
+Tuca & Bertie Extras|2019|2022|Netflix / Adult Swim|Animation|
+# ---------------------------------------------------------------- additional popular series
+Bluey Reboot|2018||ABC Kids|Animation,Family,Kids|
+Lost Girl Series|2010|2015|Showcase|Fantasy,Drama|
+The Mentalist Extras|2008|2015|CBS|Crime|
+Prison Break Series|2005|2017|Fox|Action|
+Resident Alien|2021|2025|Syfy / USA Network|Sci-Fi,Comedy|An alien disguised as a doctor in a small town.
+Mayor of Kingstown|2021||Paramount+|Crime,Drama|A family brokers peace in a prison town.
+Special Forces: World's Toughest Test|2023||Fox|Reality|
+Welcome to Wrexham Extras|2022||FX|Documentary|
+Slow Horses Extras 2|2022||Apple TV+|Thriller|
+Ghosts of Girlfriends Past Series|2021||Peacock|Comedy|
+Love Life|2020|2021|HBO Max|Romance,Comedy|Anthology of romance.
+Dead Ringers|2023|2023|Prime Video|Horror,Drama|Twin gynecologists.
+Fleishman Extras|2022|2022|FX|Drama|
+Kevin Can Extras|2021|2022|AMC|Comedy|
+Space Force|2020|2022|Netflix|Comedy|A general leads a new branch of the military.
+Hunters Series|2020|2023|Prime Video|Crime,Thriller|
+BoJack Extras|2014|2020|Netflix|Animation|
+Archer Extras|2009|2023|FX|Animation|
+Rick and Morty Extras|2013||Adult Swim|Animation|
+Raised by Wolves Extras|2020|2022|HBO Max|Sci-Fi|
+Sneaky Pete|2015|2019|Prime Video|Crime,Drama|A con man takes a cellmate's identity.
+Goliath Series|2016|2021|Prime Video|Drama|A washed-up lawyer takes a David vs. Goliath case.
+Bosch Extras 2|2014|2021|Prime Video|Crime|
+Hannibal Extras|2013|2015|NBC|Horror|
+Lucifer Extras|2016|2021|Netflix|Fantasy|
+Sweet Tooth|2021|2024|Netflix|Fantasy,Adventure|A deer-boy hybrid journeys across a post-apocalyptic America.
+Warrior Nun|2020|2022|Netflix|Fantasy,Action|A young woman gets supernatural powers.
+Shadow and Bone Extras|2021|2023|Netflix|Fantasy|
+The Sandman Extras|2022|2025|Netflix|Fantasy|
+Good Omens Extras|2019||Prime Video|Fantasy|
+His Dark Materials Extras|2019|2022|BBC|Fantasy|
+Avatar Live Extras|2024||Netflix|Fantasy|
+Fleabag Extras 4|2016|2019|BBC|Comedy|
