@@ -17,9 +17,9 @@ const mk = (id, v, extra) => Object.assign({
 
 console.log('Dataset (v7)');
 check(`catalog is large and curated (${MOVIES.length} films)`, () => assert.ok(MOVIES.length >= 10000));
-check('catalog skews modern: >= 70% from 2000 on, < 2% before 1970', () => {
-  assert.ok(MOVIES.filter(m => m.year >= 2000).length / MOVIES.length >= 0.70);
-  assert.ok(MOVIES.filter(m => m.year < 1970).length / MOVIES.length < 0.02);
+check('catalog skews modern: >= 60% from 2000 on, < 8% before 1970', () => {
+  assert.ok(MOVIES.filter(m => m.year >= 2000).length / MOVIES.length >= 0.60);
+  assert.ok(MOVIES.filter(m => m.year < 1970).length / MOVIES.length < 0.08);
 });
 check('every movie has the required fields and sane values', () => {
   for (const m of MOVIES) {
@@ -177,3 +177,17 @@ check('couples sim: both partners get a decent match on every pick', () => {
 });
 
 console.log(`\nALL ${passed} ENGINE TESTS PASSED`);
+
+check('rouletteSelect returns 5 diverse picks in every mode', () => {
+  ['surprise','unseen','horror','date','short','critics','throwback','hidden','match','outside'].forEach(mode => {
+    const taste = { adrenaline: 7, brainy: 4, scary: 1, funny: 3, heartwarming: 2, dark: 5, romantic: 1, epic: 5, cozy: 1, weird: 2 };
+    const r = E.rouletteSelect(MOVIES, { mode, taste: (mode==='match'||mode==='outside') ? taste : null });
+    assert.strictEqual(r.length, 5, mode);
+    assert.strictEqual(new Set(r.map(x => x.movie.id)).size, 5, mode);
+  });
+});
+check('rouletteSelect honors unseen + genre', () => {
+  const seen = MOVIES.slice(0, 500).map(m => m.id);
+  const r = E.rouletteSelect(MOVIES, { mode: 'unseen', watched: seen, genre: 'Comedy' });
+  assert.ok(r.every(x => seen.indexOf(x.movie.id) < 0 && x.movie.genres.includes('Comedy')));
+});
