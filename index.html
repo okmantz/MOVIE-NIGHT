@@ -69,11 +69,6 @@
         </div>
         <div id="show-shuffle-results" class="list-grid"></div>
       </div>
-      <div class="panel">
-        <h3 class="panel-title">Top Series — the essential twenty</h3>
-        <p class="fineprint">A curated list, like the movie Top 20. Tap any title for its card.</p>
-        <div id="top-series-list"></div>
-      </div>
       <div class="browse-controls">
         <input id="show-search" type="search" placeholder="Search series, genres, creators…" autocomplete="off">
         <select id="show-sort" aria-label="Sort shows">
@@ -143,10 +138,15 @@
   <!-- TOP 20 -->
   <section id="view-top20" class="view">
     <div class="panel slim">
-      <h2>Top 20 of All Time</h2>
-      <p class="muted">Our canon: <em>Inception</em> at #1, Owen's essentials, and the rest drawn from the highest-rated films ever on Rotten Tomatoes. Ranked, argued over, final.</p>
+      <h2 id="top20-title">Top 20 of All Time</h2>
+      <p class="muted" id="top20-blurb">Our canon: <em>Inception</em> at #1, Owen's essentials, and the rest drawn from the highest-rated films ever on Rotten Tomatoes. Ranked, argued over, final.</p>
+      <div class="segmented" id="top20-toggle" style="margin-top:12px">
+        <button class="seg selected" data-top20-mode="movies">Movies</button>
+        <button class="seg" data-top20-mode="shows">TV Shows</button>
+      </div>
     </div>
     <div id="top20-list"></div>
+    <div id="top20-series-list" class="hidden"></div>
   </section>
 
   <!-- SHUFFLE -->
