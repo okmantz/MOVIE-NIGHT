@@ -61,7 +61,10 @@
   }
 
   function emptyData() {
-    return { favorites: [], watchlist: [], history: [], taste: null };
+    return {
+      favorites: [], watchlist: [], history: [], taste: null,
+      showFavorites: [], showWatchlist: []
+    };
   }
   function getData(id) {
     var d = readJSON(DATA_PREFIX + id, null);
@@ -71,13 +74,19 @@
     out.watchlist = Array.isArray(d.watchlist) ? d.watchlist : [];
     out.history = Array.isArray(d.history) ? d.history : [];
     out.taste = d.taste || null;
+    /* TV-section lists live in their own fields so show ids (prefixed
+       "tv-") can never collide with movie favorites/watchlist. Records
+       saved before v6 simply default to empty lists. */
+    out.showFavorites = Array.isArray(d.showFavorites) ? d.showFavorites : [];
+    out.showWatchlist = Array.isArray(d.showWatchlist) ? d.showWatchlist : [];
     return out;
   }
   function saveData(id, data) {
     data = data || {};
     writeJSON(DATA_PREFIX + id, {
       favorites: data.favorites || [], watchlist: data.watchlist || [],
-      history: data.history || [], taste: data.taste || null
+      history: data.history || [], taste: data.taste || null,
+      showFavorites: data.showFavorites || [], showWatchlist: data.showWatchlist || []
     });
   }
 

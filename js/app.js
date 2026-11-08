@@ -10,6 +10,29 @@
   var APP_URL = 'https://okmantz.github.io/MOVIE-NIGHT/';
   var byId = {};
   MOVIES.forEach(function (m) { byId[m.id] = m; });
+  /* TV shows (v6, js/shows.js). Show ids are prefixed "tv-" so they can
+     never collide with movie ids in shared handlers. */
+  var SHOW_LIST = (typeof SHOWS !== 'undefined') ? SHOWS : [];
+  var showById = {};
+  SHOW_LIST.forEach(function (s) { showById[s.id] = s; });
+  function anyById(id) { return showById[id] || byId[id]; }
+  function isShow(it) { return !!it && it.startYear !== undefined; }
+  function yearText(it) {
+    if (isShow(it)) {
+      if (!it.startYear) return 'Series';
+      if (it.endYear) return it.startYear === it.endYear ? '' + it.startYear : it.startYear + '–' + it.endYear;
+      return it.startYear + '–present';
+    }
+    return '' + it.year;
+  }
+  function lengthLabel(it) {
+    if (isShow(it)) {
+      if (it.seasons) return it.seasons + (it.seasons === 1 ? ' season' : ' seasons');
+      if (it.episodes) return it.episodes + ' episodes';
+      return '';
+    }
+    return runtimeLabel(it.runtime);
+  }
 
   /* ---------- helpers ---------- */
   function $(sel) { return document.querySelector(sel); }
@@ -24,7 +47,11 @@
     Romance: ['#6e2438', '#200a12'], Crime: ['#3a3f1a', '#12130a'], Animation: ['#14532d', '#071a10'],
     Mystery: ['#2e2a4a', '#0d0b1a'], War: ['#4a4232', '#171410'],
     Family: ['#155e63', '#081d1f'], Fantasy: ['#3d2a63', '#120b24'], Adventure: ['#6b3a12', '#1f1004'],
-    Western: ['#6e4517', '#211304'], Musical: ['#5b2a5e', '#1c0b1e']
+    Western: ['#6e4517', '#211304'], Musical: ['#5b2a5e', '#1c0b1e'],
+    Documentary: ['#8a7b4f', '#3d3423'], Docuseries: ['#7d6a45', '#38301f'],
+    Reality: ['#b04a8a', '#4a1f3a'], Superhero: ['#31519e', '#16264f'],
+    'Historical Drama': ['#8a6d3b', '#40331a'], 'Psychological Thriller': ['#4a3d63', '#241d33'],
+    'Family Drama': ['#7c6a8a', '#372f40'], 'Horror Thriller': ['#40254d', '#231233']
   };
   function paletteFor(movie) {
     var p = PALETTES[movie.genres[0]] || ['#33334a', '#101018'];
@@ -38,13 +65,13 @@
       '<div class="cover-fallback" style="' + paletteFor(movie) + '">' +
       '<div class="cover-initial">' + esc(movie.title.replace(/^(The|A|An) /, '').charAt(0)) + '</div>' +
       '<div class="cover-title">' + esc(movie.title) + '</div>' +
-      '<div class="cover-meta">' + movie.year + ' · ' + esc(movie.genres[0]) + '</div>' +
+      '<div class="cover-meta">' + yearText(movie) + ' · ' + esc(movie.genres[0]) + '</div>' +
       '</div></div>';
   }
   function cardHTML(movie) {
     return '<button class="card" data-open="' + movie.id + '">' + coverHTML(movie) +
       '<div class="card-body"><div class="card-title">' + esc(movie.title) + '</div>' +
-      '<div class="card-sub">' + metaLine(movie.year, runtimeLabel(movie.runtime), movie.rating ? esc(movie.rating) : '') + '</div>' +
+      '<div class="card-sub">' + metaLine(yearText(movie), lengthLabel(movie), movie.rating ? esc(movie.rating) : '') + '</div>' +
       '<div>' + movie.genres.slice(0, 2).map(function (g) { return '<span class="genre-tag">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div class="card-desc">' + esc(movie.description) + '</div></div></button>';
   }
@@ -68,6 +95,7 @@
       id: rec.id, name: rec.name, emoji: rec.emoji, color: rec.color,
       email: rec.email || null, unclaimed: !!rec.unclaimed, guest: !!rec.guest,
       favorites: d.favorites || [], watchlist: d.watchlist || [],
+      showFavorites: d.showFavorites || [], showWatchlist: d.showWatchlist || [],
       history: d.history || [], taste: taste
     };
   }
@@ -91,7 +119,11 @@
   refreshPeople();
   function save() {
     state.profiles.forEach(function (p) {
-      A.saveData(p.id, { favorites: p.favorites, watchlist: p.watchlist, history: p.history, taste: p.taste });
+      A.saveData(p.id, {
+        favorites: p.favorites, watchlist: p.watchlist,
+        showFavorites: p.showFavorites, showWatchlist: p.showWatchlist,
+        history: p.history, taste: p.taste
+      });
     });
     try { localStorage.setItem(UI_KEY, JSON.stringify({ coupleA: state.coupleA, coupleB: state.coupleB })); } catch (e) { /* ignore */ }
   }
@@ -114,6 +146,8 @@
     if (view === 'couples') renderCouplesSetup();
   }
   document.addEventListener('click', function (ev) {
+    var ml = ev.target.closest('[data-media-link]');
+    if (ml) { setMedia(ml.dataset.mediaLink); goto('home'); return; }
     var g = ev.target.closest('[data-goto]');
     if (g) { goto(g.dataset.goto); return; }
     var o = ev.target.closest('[data-open]');
@@ -348,29 +382,46 @@
   }
   function toggleList(listName, id) {
     var p = profile();
-    var i = p[listName].indexOf(id);
-    if (i === -1) p[listName].push(id); else p[listName].splice(i, 1);
+    /* Shows live in parallel per-account lists so a series can never
+       land in (or evict anything from) the movie lists. */
+    var field = showById[id]
+      ? 'show' + listName.charAt(0).toUpperCase() + listName.slice(1)
+      : listName;
+    var i = p[field].indexOf(id);
+    if (i === -1) p[field].push(id); else p[field].splice(i, 1);
     save();
   }
   function openDetail(id) {
-    var m = byId[id]; if (!m) return;
+    var m = anyById(id); if (!m) return;
+    var tv = isShow(m);
     var p = profile();
-    var fav = p.favorites.indexOf(id) !== -1, wl = p.watchlist.indexOf(id) !== -1;
-    var similar = E.similarMovies(MOVIES, m, 6);
+    var favList = tv ? p.showFavorites : p.favorites;
+    var wlList = tv ? p.showWatchlist : p.watchlist;
+    var fav = favList.indexOf(id) !== -1, wl = wlList.indexOf(id) !== -1;
+    var similar = E.similarMovies(tv ? SHOW_LIST : MOVIES, m, 6);
+    var meta = tv
+      ? metaLine(yearText(m), m.status || '',
+          m.seasons ? m.seasons + (m.seasons === 1 ? ' season' : ' seasons') : '',
+          m.episodes ? m.episodes + ' episodes' : '',
+          m.network ? '📺 ' + esc(m.network) : '',
+          m.creator ? 'Created by ' + esc(m.creator) : '',
+          m.rating ? 'Rated ' + esc(m.rating) : '')
+      : metaLine(m.year, (m.director && m.director !== 'Unknown') ? 'Directed by ' + esc(m.director) : '', runtimeLabel(m.runtime), m.rating ? 'Rated ' + esc(m.rating) : '');
     $('#detail-sheet').innerHTML =
       '<div class="sheet-hero">' + (m.poster ? '<div class="sheet-backdrop" style="background-image:url(&quot;' + esc(m.poster) + '&quot;)"></div>' : '') + coverHTML(m) +
       '<button class="sheet-close" id="detail-close" aria-label="Close">✕</button></div>' +
       '<div class="sheet-body"><h2>' + esc(m.title) + '</h2>' +
-      '<p class="meta-line">' + metaLine(m.year, (m.director && m.director !== 'Unknown') ? 'Directed by ' + esc(m.director) : '', runtimeLabel(m.runtime), m.rating ? 'Rated ' + esc(m.rating) : '') + '</p>' +
+      '<p class="meta-line">' + meta + '</p>' +
       '<div>' + m.genres.map(function (g) { return '<span class="genre-tag">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<p>' + esc(m.description) + '</p>' +
       '<div class="row-gap">' +
       '<button class="btn ' + (fav ? 'btn-primary' : '') + '" id="detail-fav">' + (fav ? '♥ Favorited' : '♡ Favorite') + '</button>' +
       '<button class="btn ' + (wl ? 'btn-primary' : '') + '" id="detail-wl">' + (wl ? '✓ On watchlist' : '+ Watchlist') + '</button></div>' +
+      (tv ? '<p class="fineprint">Platform shown is the original network or service that first aired the series — where it streams today changes often and isn\'t tracked here.</p>' : '') +
       '<h3>Taste profile</h3>' + vectorBars(m.vector) +
       '<div class="kw-row">' + m.keywords.map(function (k) { return '<span class="kw">#' + esc(k) + '</span>'; }).join('') + '</div>' +
       '<h3>More like this</h3><div class="similar-grid">' +
-      similar.map(function (s) { return '<button class="card" data-open="' + s.id + '">' + coverHTML(s) + '<div class="card-body"><div class="card-title">' + esc(s.title) + '</div><div class="card-sub">' + s.year + '</div></div></button>'; }).join('') +
+      similar.map(function (s) { return '<button class="card" data-open="' + s.id + '">' + coverHTML(s) + '<div class="card-body"><div class="card-title">' + esc(s.title) + '</div><div class="card-sub">' + yearText(s) + '</div></div></button>'; }).join('') +
       '</div></div>';
     $('#detail-overlay').classList.remove('hidden');
     $('#detail-close').addEventListener('click', closeDetail);
@@ -402,13 +453,13 @@
   function pairCard(movie, side) {
     return '<button class="card" data-pick="' + side + '">' + coverHTML(movie) +
       '<div class="card-body"><div class="card-title">' + esc(movie.title) + '</div>' +
-      '<div class="card-sub">' + metaLine(movie.year, esc(movie.genres[0]), runtimeLabel(movie.runtime)) + '</div>' +
+      '<div class="card-sub">' + metaLine(yearText(movie), esc(movie.genres[0]), lengthLabel(movie)) + '</div>' +
       '<div class="card-desc">' + esc(movie.description) + '</div></div></button>';
   }
   function resultCard(r, extra) {
     var m = r.movie;
     return '<div class="result-card"><div data-open="' + m.id + '" style="cursor:pointer">' + coverHTML(m) + '</div>' +
-      '<div class="result-main"><div class="card-title">' + esc(m.title) + ' <span class="muted">(' + m.year + ')</span></div>' +
+      '<div class="result-main"><div class="card-title">' + esc(m.title) + ' <span class="muted">(' + yearText(m) + ')</span></div>' +
       (extra || '') +
       '<div class="why">' + esc(r.why) + '</div>' +
       '<div class="result-actions"><button class="btn" data-open="' + m.id + '">Details</button>' +
@@ -419,25 +470,46 @@
     if (w) { toggleList('watchlist', w.dataset.watch); w.textContent = '✓ On watchlist'; w.classList.add('selected'); }
   });
 
-  /* ---------- solo quiz ---------- */
+  /* ---------- solo quiz (movies or TV shows) ---------- */
   var quiz = null;
   var soloRounds = 15;
+  var quizPool = 'movies';
+  function setQuizPool(pool) {
+    quizPool = pool;
+    document.querySelectorAll('#quiz-pool .seg').forEach(function (s) {
+      s.classList.toggle('selected', s.dataset.pool === pool);
+    });
+    var tv = pool === 'shows';
+    $('#quiz-setup-title').textContent = tv ? 'Next Series Quiz' : 'Mood Match Quiz';
+    $('#quiz-setup-copy').textContent = tv
+      ? 'Two series, one tap. Pick the one you\'d rather start — there are no wrong answers. After the last round we\'ll line up 3–5 shows matched to your taste.'
+      : 'Two movies, one tap. Pick the one you\'re more in the mood for — there are no wrong answers. After the last round we\'ll line up 3–5 films matched to your taste.';
+  }
+  $('#quiz-pool').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-pool]'); if (!b) return;
+    setQuizPool(b.dataset.pool);
+  });
   $('#quiz-rounds').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-rounds]'); if (!b) return;
     soloRounds = parseInt(b.dataset.rounds, 10);
     this.querySelectorAll('.seg').forEach(function (s) { s.classList.toggle('selected', s === b); });
   });
   $('#quiz-start').addEventListener('click', function () {
-    quiz = { rounds: soloRounds, round: 0, used: [], picks: [], pair: null, rng: E.makeRng(Date.now() % 2147483647) };
+    var tv = quizPool === 'shows';
+    quiz = {
+      rounds: soloRounds, round: 0, used: [], picks: [], pair: null,
+      rng: E.makeRng(Date.now() % 2147483647),
+      pool: quizPool, list: tv ? SHOW_LIST : MOVIES, map: tv ? showById : byId
+    };
     $('#quiz-setup').classList.add('hidden');
     $('#quiz-results').classList.add('hidden');
     $('#quiz-play').classList.remove('hidden');
     nextSoloRound();
   });
   function nextSoloRound() {
-    var pref = E.preferenceFromPicks(quiz.picks.map(function (p) { return { chosen: byId[p.chosenId], passed: byId[p.passedId], kind: p.kind }; }));
+    var pref = E.preferenceFromPicks(quiz.picks.map(function (p) { return { chosen: quiz.map[p.chosenId], passed: quiz.map[p.passedId], kind: p.kind }; }));
     quiz.pref = pref;
-    var pair = E.nextPair(MOVIES, quiz.used, quiz.round, quiz.rounds, quiz.round > 0 ? pref : null, quiz.rng);
+    var pair = E.nextPair(quiz.list, quiz.used, quiz.round, quiz.rounds, quiz.round > 0 ? pref : null, quiz.rng);
     if (!pair || quiz.round >= quiz.rounds) return finishSolo();
     quiz.pair = pair;
     quiz.used.push(pair[0].id, pair[1].id);
@@ -469,11 +541,12 @@
   $('#quiz-neither').addEventListener('click', function () { soloAnswer('neither'); });
   function finishSolo() {
     $('#quiz-play').classList.add('hidden');
-    var recs = E.buildRecommendations(MOVIES, quiz.pref, { excludeIds: quiz.used, limit: 5 });
+    var tv = quiz.pool === 'shows';
+    var recs = E.buildRecommendations(quiz.list, quiz.pref, { excludeIds: quiz.used, limit: 5 });
     var p = profile();
-    recordQuiz(p, 'solo', quiz.rounds, quiz.pref, recs.map(function (r) { return r.movie.title; }));
+    recordQuiz(p, tv ? 'series' : 'solo', quiz.rounds, quiz.pref, recs.map(function (r) { return r.movie.title; }));
     var box = $('#quiz-results');
-    box.innerHTML = '<div class="panel"><h2>🎬 Tonight, you\'re watching…</h2>' +
+    box.innerHTML = '<div class="panel"><h2>' + (tv ? '📺 Your next series…' : '🎬 Tonight, you\'re watching…') + '</h2>' +
       '<p class="muted">Matched to ' + esc(p.name) + '\'s taste from ' + quiz.rounds + ' rounds. Saved to your profile.</p></div>' +
       recs.map(function (r) {
         return resultCard(r, '<div class="match">' + Math.round(((r.score + 1) / 2) * 100) + '% match</div>');
@@ -625,10 +698,11 @@
       return '<div class="bar-row"><span>' + x.axis.charAt(0).toUpperCase() + x.axis.slice(1) + '</span><div class="bar-track"><div class="bar-fill" style="width:' + Math.round(x.v * 10) + '%"></div></div><span class="bar-val">' + x.v.toFixed(1) + '</span></div>';
     }).join('');
   }
-  function miniGrid(ids) {
-    if (!ids.length) return '<p class="muted">Nothing here yet — tap a movie and add it.</p>';
+  function miniGrid(ids, map, emptyMsg) {
+    map = map || byId;
+    if (!ids.length) return '<p class="muted">' + (emptyMsg || 'Nothing here yet — tap a movie and add it.') + '</p>';
     return '<div class="list-grid">' + ids.map(function (id) {
-      var m = byId[id]; if (!m) return '';
+      var m = map[id]; if (!m) return '';
       return '<button class="card" data-open="' + m.id + '">' + coverHTML(m) + '<div class="card-body"><div class="card-title">' + esc(m.title) + '</div></div></button>';
     }).join('') + '</div>';
   }
@@ -699,11 +773,114 @@
     $('#profile-lists').innerHTML =
       '<div class="panel"><h3>♥ Favorites</h3>' + miniGrid(p.favorites) + '</div>' +
       '<div class="panel"><h3>Watchlist</h3>' + miniGrid(p.watchlist) + '</div>' +
+      '<div class="panel"><h3>📺 Series favorites</h3>' + miniGrid(p.showFavorites, showById, 'Nothing here yet — open the TV Shows section and favorite a series.') + '</div>' +
+      '<div class="panel"><h3>📺 Series watchlist</h3>' + miniGrid(p.showWatchlist, showById, 'Nothing here yet — add a series from the TV Shows section.') + '</div>' +
       (p.history.length ? '<div class="panel"><h3>Recent quizzes</h3>' + p.history.slice(-5).reverse().map(function (h) {
-        return '<p class="muted" style="margin:6px 0">' + (h.mode === 'couples' ? '💞 Couples' : '🎯 Solo') + ' · ' + h.rounds + ' rounds · ' + new Date(h.date).toLocaleDateString() +
+        return '<p class="muted" style="margin:6px 0">' + (h.mode === 'couples' ? '💞 Couples' : h.mode === 'series' ? '📺 Series' : '🎯 Solo') + ' · ' + h.rounds + ' rounds · ' + new Date(h.date).toLocaleDateString() +
           (h.top && h.top.length ? '<br>Top pick: <strong style="color:var(--text)">' + esc(h.top[0]) + '</strong>' : '') + '</p>';
       }).join('') + '</div>' : '');
   }
+
+  /* ---------- TV shows section ---------- */
+  var mediaMode = 'movies';
+  var showsInited = false;
+  var showGenre = 'All';
+  var showShown = PAGE_SIZE;
+  function setMedia(mode) {
+    mediaMode = mode;
+    document.querySelectorAll('#media-switch .seg').forEach(function (s) {
+      s.classList.toggle('selected', s.dataset.media === mode);
+    });
+    $('#movies-browse').classList.toggle('hidden', mode !== 'movies');
+    $('#shows-browse').classList.toggle('hidden', mode !== 'shows');
+    if (mode === 'shows' && !showsInited) { initShows(); showsInited = true; }
+    window.scrollTo({ top: 0 });
+  }
+  $('#media-switch').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-media]'); if (!b) return;
+    setMedia(b.dataset.media);
+  });
+  function showHay(s) {
+    return (s.title + ' ' + s.genres.join(' ') + ' ' + (s.creator || '') + ' ' +
+      (s.network || '') + ' ' + s.keywords.join(' ')).toLowerCase();
+  }
+  function renderShows(reset) {
+    if (reset) showShown = PAGE_SIZE;
+    var q = $('#show-search').value.trim().toLowerCase();
+    var sort = $('#show-sort').value;
+    var list = SHOW_LIST.filter(function (s) {
+      if (showGenre !== 'All' && s.genres.indexOf(showGenre) === -1) return false;
+      return !q || showHay(s).indexOf(q) !== -1;
+    });
+    list.sort(function (a, b) {
+      if (sort === 'new') return (b.startYear || 0) - (a.startYear || 0) || a.title.localeCompare(b.title);
+      if (sort === 'seasons') return (b.seasons || 0) - (a.seasons || 0) || a.title.localeCompare(b.title);
+      if (sort === 'episodes') return (b.episodes || 0) - (a.episodes || 0) || a.title.localeCompare(b.title);
+      return a.title.localeCompare(b.title);
+    });
+    var shown = list.slice(0, showShown);
+    $('#show-browse-count').textContent = list.length + (list.length === 1 ? ' series' : ' series') +
+      (list.length > shown.length ? ' · showing ' + shown.length : '');
+    $('#show-grid').innerHTML = shown.map(cardHTML).join('') ||
+      '<p class="muted">Nothing matches — try a different search or genre.</p>';
+    $('#show-more-shows').classList.toggle('hidden', list.length <= shown.length);
+  }
+  function initShows() {
+    var sc = $('#shows-count'); if (sc) sc.textContent = SHOW_LIST.length.toLocaleString() + '+';
+    /* genre chips with counts */
+    var counts = {}, genres = [];
+    SHOW_LIST.forEach(function (s) {
+      s.genres.forEach(function (g) {
+        counts[g] = (counts[g] || 0) + 1;
+        if (genres.indexOf(g) === -1) genres.push(g);
+      });
+    });
+    genres.sort(function (a, b) { return counts[b] - counts[a]; });
+    var box = $('#show-genre-chips');
+    ['All'].concat(genres).forEach(function (g) {
+      var n = g === 'All' ? SHOW_LIST.length : counts[g];
+      var c = el('<button class="chip' + (g === 'All' ? ' active' : '') + '" data-sgenre="' + esc(g) + '">' + esc(g) + ' <span class="chip-count">' + n + '</span></button>');
+      c.addEventListener('click', function () {
+        showGenre = g;
+        box.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('active', x.dataset.sgenre === g); });
+        renderShows(true);
+      });
+      box.appendChild(c);
+    });
+    /* shuffle genre select */
+    var sgs = $('#show-shuffle-genre');
+    sgs.innerHTML = '<option value="">Any genre</option>' + genres.map(function (g) {
+      return '<option>' + esc(g) + '</option>';
+    }).join('');
+    /* Top Series */
+    var top = (typeof TOP_SERIES !== 'undefined') ? TOP_SERIES : [];
+    $('#top-series-list').innerHTML = top.map(function (t, i) {
+      var s = showById[t.id]; if (!s) return '';
+      return '<button class="top-row" data-open="' + s.id + '"><span class="top-rank">' + (i + 1) + '</span>' + coverHTML(s) +
+        '<span><span class="card-title">' + esc(s.title) + '</span><div class="card-sub">' + yearText(s) + ' · ' + esc(s.genres.slice(0, 2).join(', ')) + '</div>' +
+        '<div class="top-note">' + esc(t.note) + '</div></span></button>';
+    }).join('');
+    renderShows(true);
+  }
+  $('#show-more-shows').addEventListener('click', function () { showShown += PAGE_SIZE; renderShows(false); });
+  var showSearchTimer = null;
+  $('#show-search').addEventListener('input', function () {
+    clearTimeout(showSearchTimer);
+    showSearchTimer = setTimeout(function () { renderShows(true); }, 150);
+  });
+  $('#show-sort').addEventListener('change', function () { renderShows(true); });
+  $('#show-shuffle-btn').addEventListener('click', function () {
+    var g = $('#show-shuffle-genre').value;
+    var picks = E.shufflePick(SHOW_LIST, { genre: g || 'All', count: 5, rng: Math.random });
+    $('#show-shuffle-results').innerHTML = '<div class="grid">' + picks.map(cardHTML).join('') + '</div>';
+  });
+  $('#start-show-quiz').addEventListener('click', function () {
+    setQuizPool('shows');
+    $('#quiz-play').classList.add('hidden');
+    $('#quiz-results').classList.add('hidden');
+    $('#quiz-setup').classList.remove('hidden');
+    goto('quiz');
+  });
 
   /* ---------- init ---------- */
   renderHeaderProfile();

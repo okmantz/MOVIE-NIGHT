@@ -213,7 +213,7 @@
        the catalog, and the quiz would only ever ask about those). */
     var candidates = [];
     (function () {
-      var target = Math.min(18, pool.length);
+      var target = Math.min(24, pool.length);
       var buckets = {}, keys = [], i, g, b;
       for (i = 0; i < pool.length; i++) {
         g = pool[i].genres[0] || 'Other';
