@@ -306,11 +306,11 @@
   /* ---------- browse ---------- */
   var allGenres = [];
   MOVIES.forEach(function (m) { m.genres.forEach(function (g) { if (allGenres.indexOf(g) === -1) allGenres.push(g); }); });
-  allGenres.sort();
   var activeGenre = 'All';
   var chipsBox = $('#genre-chips');
   var genreCounts = {};
   MOVIES.forEach(function (m) { m.genres.forEach(function (g) { genreCounts[g] = (genreCounts[g] || 0) + 1; }); });
+  allGenres.sort(function (a, b) { return (genreCounts[b] || 0) - (genreCounts[a] || 0); });
   ['All'].concat(allGenres).forEach(function (g) {
     var n = g === 'All' ? MOVIES.length : (genreCounts[g] || 0);
     var c = el('<button class="chip' + (g === 'All' ? ' active' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + ' <span class="chip-count">' + n + '</span></button>');
@@ -335,6 +335,7 @@
       return hay.indexOf(q) !== -1;
     });
     list.sort(function (a, b) {
+      if (sort === 'pop') return (b.ap || 0) - (a.ap || 0) || a.title.localeCompare(b.title);
       if (sort === 'new') return b.year - a.year || a.title.localeCompare(b.title);
       if (sort === 'old') return a.year - b.year || a.title.localeCompare(b.title);
       if (sort === 'short') return (a.runtime || 99999) - (b.runtime || 99999);
@@ -356,8 +357,8 @@
 
   /* ---------- tonight's pick (rotates daily, seeded by date) ---------- */
   (function renderHero() {
-    var cc = $('#catalog-count'); if (cc) cc.textContent = MOVIES.length.toLocaleString() + '+';
-    var pool = MOVIES.filter(function (m) { return m.poster && m.year >= 1960; });
+    var cc = $('#catalog-count'); if (cc) cc.textContent = (Math.floor(MOVIES.length / 100) * 100).toLocaleString() + '+';
+    var pool = MOVIES.filter(function (m) { return m.poster && m.year >= 2000 && (m.ap || 0) >= 82; });
     if (!pool.length) pool = MOVIES;
     var seed = Math.floor(Date.now() / 86400000);
     var pick = pool[seed % pool.length];
@@ -391,6 +392,15 @@
     if (i === -1) p[field].push(id); else p[field].splice(i, 1);
     save();
   }
+  function detailFit(m, tv) {
+    var me = state.activeId ? profile(state.activeId) : null;
+    if (!me) return '';
+    var has = E.AXES.some(function (a) { return me.taste[a] > 0; });
+    if (!has) return '';
+    E.calibrate(tv ? SHOW_LIST : MOVIES);
+    var pct = E.matchPercent(me.taste, m);
+    return '<div class="detail-why"><strong>' + pct + '% match</strong> for your taste. ' + esc(E.whyFor(me.taste, m)) + '</div>';
+  }
   function openDetail(id) {
     var m = anyById(id); if (!m) return;
     var tv = isShow(m);
@@ -413,6 +423,7 @@
       '<div class="sheet-body"><h2>' + esc(m.title) + '</h2>' +
       '<p class="meta-line">' + meta + '</p>' +
       '<div>' + m.genres.map(function (g) { return '<span class="genre-tag">' + esc(g) + '</span>'; }).join('') + '</div>' +
+      detailFit(m, tv) +
       '<p>' + esc(m.description) + '</p>' +
       '<div class="row-gap">' +
       '<button class="btn ' + (fav ? 'btn-primary' : '') + '" id="detail-fav">' + (fav ? '♥ Favorited' : '♡ Favorite') + '</button>' +
@@ -456,11 +467,21 @@
       '<div class="card-sub">' + metaLine(yearText(movie), esc(movie.genres[0]), lengthLabel(movie)) + '</div>' +
       '<div class="card-desc">' + esc(movie.description) + '</div></div></button>';
   }
-  function resultCard(r, extra) {
-    var m = r.movie;
-    return '<div class="result-card"><div data-open="' + m.id + '" style="cursor:pointer">' + coverHTML(m) + '</div>' +
-      '<div class="result-main"><div class="card-title">' + esc(m.title) + ' <span class="muted">(' + yearText(m) + ')</span></div>' +
-      (extra || '') +
+  function ringHTML(pct) {
+    return '<span class="ring" style="--p:' + pct + '" aria-label="' + pct + ' percent match"><b>' + pct + '%</b></span>';
+  }
+  function resultCard(r, extra, idx, ringPct) {
+    var m = r.movie, featured = idx === 0;
+    var meta = metaLine(yearText(m), lengthLabel(m), m.rating ? esc(m.rating) : '', esc(m.genres.slice(0, 2).join(', ')));
+    var head = (featured ? '<div class="top-badge">Your top pick</div>' : '');
+    var cover = featured
+      ? '<div class="cover-wrap" data-open="' + m.id + '">' + coverHTML(m) + '</div>'
+      : '<div data-open="' + m.id + '" style="cursor:pointer">' + coverHTML(m) + '</div>';
+    return '<div class="result-card' + (featured ? ' featured' : '') + '">' +
+      (!featured && idx != null ? '<span class="result-rank">#' + (idx + 1) + '</span>' : '') + cover +
+      '<div class="result-main">' + head +
+      '<div class="card-title">' + esc(m.title) + '</div><div class="card-sub">' + meta + '</div>' +
+      (ringPct != null ? '<div class="match-row">' + ringHTML(ringPct) + '<div>' + (extra || '') + '</div></div>' : (extra || '')) +
       '<div class="why">' + esc(r.why) + '</div>' +
       '<div class="result-actions"><button class="btn" data-open="' + m.id + '">Details</button>' +
       '<button class="btn" data-watch="' + m.id + '">+ Watchlist</button></div></div></div>';
@@ -473,6 +494,26 @@
   /* ---------- solo quiz (movies or TV shows) ---------- */
   var quiz = null;
   var soloRounds = 15;
+  var quizCtx = { audience: '', length: '', era: '' };
+  document.querySelectorAll('[data-ctx]').forEach(function (grp) {
+    grp.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-val]'); if (!b) return;
+      quizCtx[grp.dataset.ctx] = b.dataset.val;
+      grp.querySelectorAll('.seg').forEach(function (x) { x.classList.toggle('selected', x === b); });
+    });
+  });
+  function ctxFilterFor(list) {
+    var f = E.contextFilter(quizCtx);
+    var sub = list.filter(f);
+    return sub.length >= 150 ? { filter: f, list: sub } : { filter: null, list: list };
+  }
+  function ctxSummary() {
+    var bits = [];
+    if (quizCtx.audience === 'date') bits.push('date night'); else if (quizCtx.audience === 'family') bits.push('family-friendly');
+    if (quizCtx.length === 'short') bits.push('under ~105 minutes'); else if (quizCtx.length === 'epic') bits.push('2h+ settle-in films');
+    if (quizCtx.era === 'modern') bits.push('2000s on'); else if (quizCtx.era === 'recent') bits.push('2015 and later');
+    return bits.join(' · ');
+  }
   var quizPool = 'movies';
   function setQuizPool(pool) {
     quizPool = pool;
@@ -496,11 +537,14 @@
   });
   $('#quiz-start').addEventListener('click', function () {
     var tv = quizPool === 'shows';
+    var full = tv ? SHOW_LIST : MOVIES;
+    var cf = ctxFilterFor(full);
     quiz = {
       rounds: soloRounds, round: 0, used: [], picks: [], pair: null,
       rng: E.makeRng(Date.now() % 2147483647),
-      pool: quizPool, list: tv ? SHOW_LIST : MOVIES, map: tv ? showById : byId
+      pool: quizPool, list: cf.list, fullList: full, filter: cf.filter, ctx: ctxSummary(), map: tv ? showById : byId
     };
+    E.calibrate(full);
     $('#quiz-setup').classList.add('hidden');
     $('#quiz-results').classList.add('hidden');
     $('#quiz-play').classList.remove('hidden');
@@ -542,17 +586,22 @@
   function finishSolo() {
     $('#quiz-play').classList.add('hidden');
     var tv = quiz.pool === 'shows';
-    var recs = E.buildRecommendations(quiz.list, quiz.pref, { excludeIds: quiz.used, limit: 5 });
+    var anchors = E.anchorsFromPicks(quiz.picks.map(function (p) { return { chosen: quiz.map[p.chosenId], passed: quiz.map[p.passedId], kind: p.kind }; }));
+    var recs = E.buildRecommendations(quiz.fullList, quiz.pref, { excludeIds: quiz.used, limit: 5, filter: quiz.filter, anchors: anchors });
     var p = profile();
     recordQuiz(p, tv ? 'series' : 'solo', quiz.rounds, quiz.pref, recs.map(function (r) { return r.movie.title; }));
     var box = $('#quiz-results');
-    box.innerHTML = '<div class="panel"><h2>' + (tv ? '📺 Your next series…' : '🎬 Tonight, you\'re watching…') + '</h2>' +
-      '<p class="muted">Matched to ' + esc(p.name) + '\'s taste from ' + quiz.rounds + ' rounds. Saved to your profile.</p></div>' +
-      recs.map(function (r) {
-        return resultCard(r, '<div class="match">' + Math.round(((r.score + 1) / 2) * 100) + '% match</div>');
+    box.innerHTML = '<div class="panel"><h2>' + (tv ? 'Your next series' : 'Tonight, you\'re watching') + '</h2>' +
+      '<p class="muted">Matched to ' + esc(p.name) + '\'s taste from ' + quiz.rounds + ' rounds' + (quiz.ctx ? ' · ' + esc(quiz.ctx) : '') + '. Saved to your profile.</p></div>' +
+      recs.map(function (r, i) {
+        return resultCard(r, '<div class="match">' + (i === 0 ? 'Best fit' : 'Strong fit') + '</div><div class="match-label">match for your taste</div>', i, r.match);
       }).join('') +
-      '<button class="btn btn-primary btn-big" id="quiz-again">Play again</button>';
+      '<button class="btn btn-primary btn-big" id="quiz-again">Play again</button>' +
+      '<button class="btn btn-ghost btn-big" id="quiz-tweak">Change audience, length or era</button>';
     box.classList.remove('hidden');
+    $('#quiz-tweak').addEventListener('click', function () {
+      box.classList.add('hidden'); $('#quiz-setup').classList.remove('hidden');
+    });
     $('#quiz-again').addEventListener('click', function () {
       box.classList.add('hidden'); $('#quiz-setup').classList.remove('hidden');
     });
@@ -581,7 +630,7 @@
     if (aId === bId) { $('#couples-error').classList.remove('hidden'); return; }
     $('#couples-error').classList.add('hidden');
     state.coupleA = aId; state.coupleB = bId; save();
-    couple = { rounds: coupleRounds, round: 0, used: [], picksA: [], picksB: [], pair: null, rng: E.makeRng((Date.now() + 7) % 2147483647), aId: aId, bId: bId, current: null };
+    couple = { list: MOVIES, rounds: coupleRounds, round: 0, used: [], picksA: [], picksB: [], pair: null, rng: E.makeRng((Date.now() + 7) % 2147483647), aId: aId, bId: bId, current: null };
     $('#couples-setup').classList.add('hidden');
     $('#couples-results').classList.add('hidden');
     $('#couples-play').classList.remove('hidden');
@@ -595,7 +644,7 @@
     var turnProfile = profile(couple.round % 2 === 0 ? couple.aId : couple.bId);
     couple.current = turnProfile;
     var combined = E.combinePreferences(couplePref(couple.picksA), couplePref(couple.picksB));
-    var pair = E.nextPair(MOVIES, couple.used, couple.round, couple.rounds, couple.round > 1 ? combined : null, couple.rng);
+    var pair = E.nextPair(couple.list, couple.used, couple.round, couple.rounds, couple.round > 1 ? combined : null, couple.rng);
     if (!pair) return finishCouples();
     couple.pair = pair;
     couple.used.push(pair[0].id, pair[1].id);
@@ -647,11 +696,11 @@
     recordQuiz(pa, 'couples', couple.rounds, prefA, titles);
     recordQuiz(pb, 'couples', couple.rounds, prefB, titles);
     var box = $('#couples-results');
-    box.innerHTML = '<div class="panel"><h2>💞 Made for the two of you</h2>' +
-      '<p class="muted">Ranked by how well each film fits ' + esc(pa.name) + ' <em>and</em> ' + esc(pb.name) + ' — shared loves counted double.</p></div>' +
-      recs.map(function (r) {
-        return resultCard(r, '<div class="match">' + Math.round((r.matchA + r.matchB) / 2) + '% together</div>' +
-          '<div class="match-sub">' + esc(pa.name) + ': ' + r.matchA + '% · ' + esc(pb.name) + ': ' + r.matchB + '%</div>');
+    box.innerHTML = '<div class="panel"><h2>Made for the two of you</h2>' +
+      '<p class="muted">Every film clears a minimum fit for both ' + esc(pa.name) + ' <em>and</em> ' + esc(pb.name) + ', then the fairest overlap wins.</p></div>' +
+      recs.map(function (r, i) {
+        return resultCard(r, '<div class="match">' + (i === 0 ? 'Best for both of you' : 'Together') + '</div>' +
+          '<div class="match-sub">' + esc(pa.name) + ' ' + r.matchA + '% · ' + esc(pb.name) + ' ' + r.matchB + '%</div>', i, Math.round((r.matchA + r.matchB) / 2));
       }).join('') +
       '<button class="btn btn-primary btn-big" id="couples-again">Play again</button>';
     box.classList.remove('hidden');
@@ -813,6 +862,7 @@
       return !q || showHay(s).indexOf(q) !== -1;
     });
     list.sort(function (a, b) {
+      if (sort === 'pop') return (b.ap || 0) - (a.ap || 0) || a.title.localeCompare(b.title);
       if (sort === 'new') return (b.startYear || 0) - (a.startYear || 0) || a.title.localeCompare(b.title);
       if (sort === 'seasons') return (b.seasons || 0) - (a.seasons || 0) || a.title.localeCompare(b.title);
       if (sort === 'episodes') return (b.episodes || 0) - (a.episodes || 0) || a.title.localeCompare(b.title);
@@ -826,7 +876,7 @@
     $('#show-more-shows').classList.toggle('hidden', list.length <= shown.length);
   }
   function initShows() {
-    var sc = $('#shows-count'); if (sc) sc.textContent = SHOW_LIST.length.toLocaleString() + '+';
+    var sc = $('#shows-count'); if (sc) sc.textContent = (Math.floor(SHOW_LIST.length / 100) * 100).toLocaleString() + '+';
     /* genre chips with counts */
     var counts = {}, genres = [];
     SHOW_LIST.forEach(function (s) {
