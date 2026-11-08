@@ -63,6 +63,7 @@
   function emptyData() {
     return {
       favorites: [], watchlist: [], history: [], taste: null, ratings: {}, watched: [], events: [], quizProfile: null, achievements: [],
+      snapshots: [], quizBoost: null, foundPerfect: false,
       showFavorites: [], showWatchlist: []
     };
   }
@@ -77,6 +78,9 @@
     out.ratings = d.ratings || {}; out.watched = Array.isArray(d.watched) ? d.watched : [];
     out.events = Array.isArray(d.events) ? d.events : []; out.quizProfile = d.quizProfile || null;
     out.achievements = Array.isArray(d.achievements) ? d.achievements : [];
+    out.snapshots = Array.isArray(d.snapshots) ? d.snapshots : [];
+    out.quizBoost = d.quizBoost || null;
+    out.foundPerfect = !!d.foundPerfect;
     /* TV-section lists live in their own fields so show ids (prefixed
        "tv-") can never collide with movie favorites/watchlist. Records
        saved before v6 simply default to empty lists. */
@@ -89,6 +93,7 @@
     writeJSON(DATA_PREFIX + id, {
       favorites: data.favorites || [], watchlist: data.watchlist || [],
       history: data.history || [], taste: data.taste || null, ratings: data.ratings || {}, watched: data.watched || [], events: data.events || [], quizProfile: data.quizProfile || null, achievements: data.achievements || [],
+      snapshots: data.snapshots || [], quizBoost: data.quizBoost || null, foundPerfect: !!data.foundPerfect,
       showFavorites: data.showFavorites || [], showWatchlist: data.showWatchlist || []
     });
   }

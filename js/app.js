@@ -359,6 +359,11 @@
   (function renderHero() {
     var cc = $('#catalog-count'); if (cc) cc.textContent = (Math.floor(MOVIES.length / 100) * 100).toLocaleString() + '+';
     var pool = MOVIES.filter(function (m) { return m.poster && m.year >= 2000 && (m.ap || 0) >= 82; });
+    var heroMe = state.activeId ? profile(state.activeId) : null;
+    if (heroMe) {
+      var fresh = pool.filter(function (m) { return heroMe.watched.indexOf(m.id) < 0 && (!heroMe.ratings || heroMe.ratings[m.id] !== -1); });
+      if (fresh.length >= 12) pool = fresh;
+    }
     if (!pool.length) pool = MOVIES;
     var seed = Math.floor(Date.now() / 86400000);
     var pick = pool[seed % pool.length];
@@ -974,7 +979,566 @@
   function openPersonalityQuiz(){var p=profile();if(!p)return;var a=p.quizProfile||{platforms:[],genres:[],mood:''},step=0;var qs=[{title:'Where do you stream?',key:'platforms',multi:true,opts:['Netflix','Prime Video','Max','Disney+','Hulu','Apple TV+','Peacock','Paramount+','Theaters / physical media']},{title:'Which genres pull you in?',key:'genres',multi:true,opts:['Psychological Thriller','Mystery','Sci-Fi','Horror','Crime','Action','Drama','Comedy','Romance','Fantasy','Documentary','Animation']},{title:'What makes a story unforgettable?',key:'mood',multi:false,opts:['Mind-bending twists','Complex characters','Atmosphere and tension','Big emotional payoff','Fast-paced action','Immersive worlds','Clever humor','Real-life stories']}];var ov=el('<div class="overlay center"><div class="welcome-card personality-modal"></div></div>');document.body.appendChild(ov);var box=ov.querySelector('.welcome-card');function draw(){var q=qs[step];box.innerHTML='<p class="eyebrow">YOUR ENTERTAINMENT DNA · STEP '+(step+1)+' OF 3</p><h2>'+q.title+'</h2><div class="quiz-choice-grid">'+q.opts.map(function(v){var on=q.multi?a[q.key].indexOf(v)>=0:a[q.key]===v;return '<button class="quiz-choice '+(on?'selected':'')+'" data-v="'+esc(v)+'">'+esc(v)+'</button>';}).join('')+'</div><div class="row-gap"><button class="btn" id="qback" '+(!step?'disabled':'')+'>Back</button><button class="btn btn-primary" id="qnext">'+(step===2?'Save personality':'Continue')+'</button></div><button class="btn btn-ghost" id="qclose">Maybe later</button>';box.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){var v=b.dataset.v;if(q.multi){var i=a[q.key].indexOf(v);if(i<0)a[q.key].push(v);else a[q.key].splice(i,1);}else a[q.key]=v;draw();};});box.querySelector('#qback').onclick=function(){if(step){step--;draw();}};box.querySelector('#qclose').onclick=function(){ov.remove();};box.querySelector('#qnext').onclick=function(){if(step<2){step++;draw();return;}p.quizProfile=a;var axis={'Mind-bending twists':'brainy','Complex characters':'heartwarming','Atmosphere and tension':'dark','Big emotional payoff':'heartwarming','Fast-paced action':'adrenaline','Immersive worlds':'epic','Clever humor':'funny','Real-life stories':'brainy'}[a.mood];if(axis)p.taste[axis]+=3;logEvent('personality-quiz','quiz-completed');save();ov.remove();renderProfile();toast('Entertainment identity updated');};}draw();}
   function maybeStartPersonalityQuiz(){var p=profile();if(p&&!p.quizProfile)setTimeout(openPersonalityQuiz,900);}
   /* Replace missing posters and logo-only SVG artwork with page thumbnails where Wikipedia has a real image. */
-  function recoverPosters(){var queue=MOVIES.concat(SHOW_LIST).filter(function(m){return !m.poster||/\.svg(?:\?|$)/i.test(m.poster);}),next=0;function worker(){if(next>=queue.length)return;var m=queue[next++],u='https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=600&titles='+encodeURIComponent(m.title);fetch(u).then(function(x){return x.json();}).then(function(d){var pages=d.query&&d.query.pages||{},pg=pages[Object.keys(pages)[0]];if(pg&&pg.thumbnail){m.poster=pg.thumbnail.source;document.querySelectorAll('[data-open="'+m.id+'"]').forEach(function(card){var cover=card.querySelector('.cover');if(cover){var img=cover.querySelector('img');if(img)img.src=m.poster;else cover.insertAdjacentHTML('afterbegin','<img src="'+esc(m.poster)+'" alt="" loading="lazy">');}});}}).catch(function(){}).finally(worker);}for(var i=0;i<4;i++)worker();}
+  function recoverPosters(){var queue=MOVIES.concat(SHOW_LIST).filter(function(m){return !m.poster||/\.svg(?:\?|$)/i.test(m.poster)||/logo/i.test(m.poster);}),next=0;function worker(){if(next>=queue.length)return;var m=queue[next++],u='https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=600&titles='+encodeURIComponent(m.title);fetch(u).then(function(x){return x.json();}).then(function(d){var pages=d.query&&d.query.pages||{},pg=pages[Object.keys(pages)[0]];if(pg&&pg.thumbnail&&/\.(jpg|jpeg|png)/i.test(pg.thumbnail.source)&&!/logo/i.test(pg.thumbnail.source)){m.poster=pg.thumbnail.source;document.querySelectorAll('[data-open="'+m.id+'"]').forEach(function(card){var cover=card.querySelector('.cover');if(cover){var img=cover.querySelector('img');if(img)img.src=m.poster;else cover.insertAdjacentHTML('afterbegin','<img src="'+esc(m.poster)+'" alt="" loading="lazy">');}});}}).catch(function(){}).finally(worker);}for(var i=0;i<4;i++)worker();}
+
+  /* ================= v10 upgrades =================
+     Everything below re-declares selected functions from earlier in this
+     file (later declarations win in JS), upgrading: per-card thumbs +
+     watched controls, taste snapshots + evolution, a fuller entertainment
+     identity, trait-based engine memory, roulette shuffle, achievements
+     with progress + seasonal challenges, and a personality quiz whose
+     answers genuinely seed the taste vector. */
+
+  function profileFromRecord(rec) {
+    var d = A.getData(rec.id);
+    var taste = E.emptyPreference();
+    if (d.taste) E.AXES.forEach(function (a) { taste[a] = d.taste[a] || 0; });
+    return {
+      id: rec.id, name: rec.name, emoji: rec.emoji, color: rec.color,
+      email: rec.email || null, unclaimed: !!rec.unclaimed, guest: !!rec.guest,
+      favorites: d.favorites || [], watchlist: d.watchlist || [],
+      showFavorites: d.showFavorites || [], showWatchlist: d.showWatchlist || [],
+      history: d.history || [], taste: taste, ratings: d.ratings || {}, watched: d.watched || [], events: d.events || [], quizProfile: d.quizProfile || null, achievements: d.achievements || [],
+      snapshots: d.snapshots || [], quizBoost: d.quizBoost || null, foundPerfect: !!d.foundPerfect
+    };
+  }
+  function save() {
+    state.profiles.forEach(function (p) {
+      A.saveData(p.id, {
+        favorites: p.favorites, watchlist: p.watchlist,
+        showFavorites: p.showFavorites, showWatchlist: p.showWatchlist,
+        history: p.history, taste: p.taste, ratings: p.ratings, watched: p.watched, events: p.events, quizProfile: p.quizProfile, achievements: p.achievements,
+        snapshots: p.snapshots || [], quizBoost: p.quizBoost || null, foundPerfect: !!p.foundPerfect
+      });
+    });
+    try { localStorage.setItem(UI_KEY, JSON.stringify({ coupleA: state.coupleA, coupleB: state.coupleB })); } catch (e) { /* ignore */ }
+  }
+
+  /* Taste snapshots: the identity's memory of where it has been. A new
+     snapshot is stored when the normalized taste has actually moved. */
+  function snapshotTaste(p, force) {
+    if (!p) return;
+    p.snapshots = p.snapshots || [];
+    var norm = E.normalizePreference(p.taste);
+    var last = p.snapshots[p.snapshots.length - 1];
+    if (!force && last) {
+      var dist = 0;
+      E.AXES.forEach(function (a) { dist += Math.abs((norm[a] || 0) - (last.taste[a] || 0)); });
+      if (dist < 2.5) return;
+    }
+    p.snapshots.push({ at: new Date().toISOString(), taste: norm });
+    if (p.snapshots.length > 24) p.snapshots = p.snapshots.slice(-24);
+  }
+  function capAxis(a) { return a.charAt(0).toUpperCase() + a.slice(1); }
+
+  /* ---------- engine memory: latent traits from what you loved ----------
+     Keywords shared across the titles a user loved/watched form trait
+     threads ("unreliable", "heist", "time loop", ...). Recommendations
+     that share a thread get called out by name — the engine remembers
+     WHY you loved things, not just which genre bucket they sat in. */
+  function likedTitles(p) {
+    return Object.keys(p.ratings || {}).filter(function (id) { return p.ratings[id] === 1; }).map(anyById).filter(Boolean);
+  }
+  function engagedTitles(p) {
+    var seen = {}, out = [];
+    (p.watched || []).forEach(function (id) { seen[id] = 1; });
+    Object.keys(p.ratings || {}).forEach(function (id) { if (p.ratings[id] === 1) seen[id] = 1; });
+    Object.keys(seen).forEach(function (id) { var m = anyById(id); if (m) out.push(m); });
+    return out;
+  }
+  function traitProfile(p) {
+    var counts = {}, films = {};
+    likedTitles(p).concat((p.watched || []).map(anyById).filter(Boolean)).forEach(function (m) {
+      (m.keywords || []).forEach(function (k) { counts[k] = (counts[k] || 0) + 1; if (!films[k]) films[k] = m.title; });
+    });
+    var top = Object.keys(counts).filter(function (k) { return counts[k] >= 2; })
+      .sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 6);
+    return { counts: counts, films: films, top: top };
+  }
+  function traitWhy(p, movie) {
+    if (!p) return '';
+    var tp = traitProfile(p);
+    if (!tp.top.length) return '';
+    var shared = (movie.keywords || []).filter(function (k) { return tp.top.indexOf(k) >= 0; });
+    if (!shared.length) return '';
+    return 'It shares the \u201C' + shared[0] + '\u201D thread running through what you love \u2014 like ' + tp.films[shared[0]] + '.';
+  }
+
+  /* ---------- thumbs + watched on every card ---------- */
+  function quickSpansHTML(m) {
+    var p = profile();
+    var r = (p && p.ratings && p.ratings[m.id]) || 0;
+    var w = !!(p && p.watched && p.watched.indexOf(m.id) >= 0);
+    return '<span class="qbtn' + (r === 1 ? ' on' : '') + '" data-qrate="1" data-qid="' + m.id + '" role="button" title="Love it">\uD83D\uDC4D</span>' +
+      '<span class="qbtn' + (r === -1 ? ' on' : '') + '" data-qrate="-1" data-qid="' + m.id + '" role="button" title="Not for me">\uD83D\uDC4E</span>' +
+      '<span class="qbtn qwatch' + (w ? ' on' : '') + '" data-qwatch="' + m.id + '" role="button" title="Mark as already watched">' + (w ? '\u2713 Watched' : '\uFF0B Watched') + '</span>';
+  }
+  function refreshQuick(id) {
+    var p = profile(); if (!p) return;
+    var r = (p.ratings && p.ratings[id]) || 0;
+    var w = !!(p.watched && p.watched.indexOf(id) >= 0);
+    document.querySelectorAll('[data-qrate][data-qid="' + id + '"]').forEach(function (b) {
+      b.classList.toggle('on', r === Number(b.dataset.qrate));
+    });
+    document.querySelectorAll('[data-qwatch="' + id + '"]').forEach(function (b) {
+      b.classList.toggle('on', w);
+      b.textContent = w ? '\u2713 Watched' : '\uFF0B Watched';
+    });
+  }
+  /* Capture phase so a tap on thumbs/watched never also opens the card. */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    var qr = t.closest('[data-qrate]');
+    if (qr) {
+      ev.stopPropagation(); ev.preventDefault();
+      rateTitle(qr.dataset.qid, Number(qr.dataset.qrate));
+      refreshQuick(qr.dataset.qid);
+      return;
+    }
+    var qw = t.closest('[data-qwatch]');
+    if (qw) {
+      ev.stopPropagation(); ev.preventDefault();
+      var p = profile();
+      if (p) { setWatched(qw.dataset.qwatch, p.watched.indexOf(qw.dataset.qwatch) < 0); refreshQuick(qw.dataset.qwatch); }
+    }
+  }, true);
+
+  function cardHTML(movie) {
+    return '<button class="card" data-open="' + movie.id + '">' + coverHTML(movie) +
+      '<div class="card-body"><div class="card-title">' + esc(movie.title) + '</div>' +
+      '<div class="card-sub">' + metaLine(yearText(movie), lengthLabel(movie), movie.rating ? esc(movie.rating) : '') + '</div>' +
+      '<div>' + movie.genres.slice(0, 2).map(function (g) { return '<span class="genre-tag">' + esc(g) + '</span>'; }).join('') + '</div>' +
+      '<div class="card-desc">' + esc(movie.description) + '</div>' +
+      '<div class="quick-row">' + quickSpansHTML(movie) + '</div></div></button>';
+  }
+  function resultCard(r, extra, idx, ringPct) {
+    var m = r.movie, featured = idx === 0;
+    var meta = metaLine(yearText(m), lengthLabel(m), m.rating ? esc(m.rating) : '', esc(m.genres.slice(0, 2).join(', ')));
+    var head = (featured ? '<div class="top-badge">Your top pick</div>' : '');
+    var cover = featured
+      ? '<div class="cover-wrap" data-open="' + m.id + '">' + coverHTML(m) + '</div>'
+      : '<div data-open="' + m.id + '" style="cursor:pointer">' + coverHTML(m) + '</div>';
+    return '<div class="result-card' + (featured ? ' featured' : '') + '">' +
+      (!featured && idx != null ? '<span class="result-rank">#' + (idx + 1) + '</span>' : '') + cover +
+      '<div class="result-main">' + head +
+      '<div class="card-title">' + esc(m.title) + '</div><div class="card-sub">' + meta + '</div>' +
+      (ringPct != null ? '<div class="match-row">' + ringHTML(ringPct) + '<div>' + (extra || '') + '</div></div>' : (extra || '')) +
+      '<div class="why">' + esc(r.why) + '</div>' +
+      '<div class="result-actions"><button class="btn" data-open="' + m.id + '">Details</button>' +
+      '<button class="btn" data-watch="' + m.id + '">+ Watchlist</button>' +
+      quickSpansHTML(m) + '</div></div></div>';
+  }
+
+  function rateTitle(id, score) {
+    var p = profile(); if (!p) return;
+    p.ratings = p.ratings || {};
+    var togglingOff = p.ratings[id] === score;
+    if (togglingOff) delete p.ratings[id]; else p.ratings[id] = score;
+    logEvent(id, score === 1 ? 'liked' : 'disliked', score);
+    var m = anyById(id);
+    if (m) E.addMovie(p.taste, m, togglingOff ? (score === 1 ? -0.65 : 0.55) : (score === 1 ? 0.65 : -0.55));
+    snapshotTaste(p);
+    save(); checkAchievements(p); refreshQuick(id);
+    toast(togglingOff ? 'Rating removed' : (score === 1 ? 'Taste updated: liked' : 'Taste updated: disliked'));
+  }
+  function setWatched(id, yes) {
+    var p = profile(); if (!p) return;
+    var i = p.watched.indexOf(id);
+    if (yes && i < 0) {
+      p.watched.push(id);
+      var wt = anyById(id); if (wt) E.addMovie(p.taste, wt, 0.25);
+      logEvent(id, 'watched'); toast('Added to watched history');
+    } else if (!yes && i >= 0) {
+      p.watched.splice(i, 1);
+      var ut = anyById(id); if (ut) E.addMovie(p.taste, ut, -0.25);
+      logEvent(id, 'unwatched');
+    }
+    snapshotTaste(p);
+    checkAchievements(p); save(); refreshQuick(id);
+  }
+
+  /* ---------- entertainment identity v2 ---------- */
+  var IDENTITY_DIMS = [
+    { name: 'Psychological Thriller', title: 'The Psychological Strategist', axes: { brainy: 0.6, dark: 0.4 }, genres: ['Thriller', 'Psychological Thriller', 'Mystery'] },
+    { name: 'Mind Games', title: 'The Mystery Hunter', axes: { brainy: 0.7, weird: 0.3 }, genres: ['Mystery', 'Sci-Fi'] },
+    { name: 'Dark Atmosphere', title: 'The Dark Storyteller', axes: { dark: 0.8, scary: 0.2 }, genres: ['Crime', 'Thriller', 'Horror'] },
+    { name: 'High-Stakes Action', title: 'The Adrenaline Seeker', axes: { adrenaline: 0.8, epic: 0.2 }, genres: ['Action', 'Adventure'] },
+    { name: 'Supernatural Horror', title: 'The Midnight Seeker', axes: { scary: 0.8, weird: 0.2 }, genres: ['Horror'] },
+    { name: 'Epic Worlds', title: 'The World Builder', axes: { epic: 0.8, brainy: 0.2 }, genres: ['Fantasy', 'Sci-Fi', 'Adventure'] },
+    { name: 'Heart & Warmth', title: 'The Emotional Explorer', axes: { heartwarming: 0.7, cozy: 0.3 }, genres: ['Drama', 'Family'] },
+    { name: 'Romance', title: 'The Romantic Idealist', axes: { romantic: 1 }, genres: ['Romance', 'Rom-Com'] },
+    { name: 'Laughs', title: 'The Comedy Curator', axes: { funny: 1 }, genres: ['Comedy'] },
+    { name: 'Cozy Comfort', title: 'The Comfort Connoisseur', axes: { cozy: 0.7, heartwarming: 0.3 }, genres: ['Family', 'Animation'] }
+  ];
+  function dimScore(dim, norm, engaged) {
+    var wsum = 0, asum = 0;
+    Object.keys(dim.axes).forEach(function (a) { wsum += dim.axes[a]; asum += dim.axes[a] * (norm[a] || 0); });
+    var axisPart = wsum ? asum / wsum : 0;
+    var genrePart = 0;
+    if (engaged.length) {
+      var hits = engaged.filter(function (m) { return m.genres.some(function (g) { return dim.genres.indexOf(g) >= 0; }); }).length;
+      genrePart = hits / engaged.length;
+    }
+    return Math.max(3, Math.min(99, Math.round((0.62 * (axisPart / 10) + 0.38 * Math.min(1, genrePart * 2.4)) * 100)));
+  }
+  var _baseNorm = null;
+  function catalogBaselineNorm() {
+    if (_baseNorm) return _baseNorm;
+    var sum = E.emptyPreference(), n = 0, i;
+    for (i = 0; i < MOVIES.length; i += 7) { E.AXES.forEach(function (a) { sum[a] += MOVIES[i].vector[a] || 0; }); n++; }
+    var mean = {};
+    E.AXES.forEach(function (a) { mean[a] = sum[a] / Math.max(1, n); });
+    _baseNorm = E.normalizePreference(mean);
+    return _baseNorm;
+  }
+  function topKeysN(o, n) {
+    return Object.keys(o).sort(function (a, b) { return o[b] - o[a]; }).slice(0, n || 3)
+      .map(function (k) { return k + ' (' + o[k] + ')'; }).join(', ') || 'Not enough data yet';
+  }
+  function identityHTML(p) {
+    var norm = E.normalizePreference(p.taste);
+    var engaged = engagedTitles(p);
+    var dims = IDENTITY_DIMS.map(function (d) { return { name: d.name, title: d.title, pct: dimScore(d, norm, engaged) }; })
+      .sort(function (a, b) { return b.pct - a.pct; });
+    var gc = {}, dc = {}, ac = {}, dec = {};
+    engaged.forEach(function (m) {
+      m.genres.forEach(function (g) { gc[g] = (gc[g] || 0) + 1; });
+      var d = m.director || m.creator; if (d && d !== 'Unknown') dc[d] = (dc[d] || 0) + 1;
+      (m.cast || []).forEach(function (a) { ac[a] = (ac[a] || 0) + 1; });
+      var y = m.year || m.startYear; if (y) dec[Math.floor(y / 10) * 10 + 's'] = (dec[Math.floor(y / 10) * 10 + 's'] || 0) + 1;
+    });
+    var ratedIds = Object.keys(p.ratings || {});
+    var likedN = ratedIds.filter(function (id) { return p.ratings[id] === 1; }).length;
+    var avgStars = ratedIds.length ? (ratedIds.reduce(function (s, id) { return s + (p.ratings[id] === 1 ? 5 : 1); }, 0) / ratedIds.length) : null;
+    /* unexpected loves: liked genres outside the usual lane */
+    var topWatched = Object.keys(gc).sort(function (a, b) { return gc[b] - gc[a]; }).slice(0, 3);
+    var declared = ((p.quizProfile && p.quizProfile.genres) || []).map(function (s) { return s.toLowerCase(); });
+    var lgc = {};
+    likedTitles(p).forEach(function (m) { m.genres.forEach(function (g) { lgc[g] = (lgc[g] || 0) + 1; }); });
+    var unexpected = Object.keys(lgc).filter(function (g) {
+      if (lgc[g] < 2 || topWatched.indexOf(g) >= 0) return false;
+      return !declared.some(function (d) { return d.indexOf(g.toLowerCase()) >= 0 || g.toLowerCase().indexOf(d) >= 0; });
+    }).sort(function (a, b) { return lgc[b] - lgc[a]; }).slice(0, 2);
+    /* evolution from snapshots */
+    var evo = '';
+    var snaps = p.snapshots || [];
+    if (snaps.length >= 2) {
+      var first = snaps[0].taste, last = snaps[snaps.length - 1].taste;
+      var diffs = E.AXES.map(function (a) { return { a: a, d: ((last[a] || 0) - (first[a] || 0)) * 10 }; }).sort(function (x, y) { return y.d - x.d; });
+      var bits = [];
+      if (diffs[0].d >= 4) bits.push('trending up: <b>' + capAxis(diffs[0].a) + ' +' + Math.round(diffs[0].d) + ' pts</b>');
+      if (diffs[diffs.length - 1].d <= -4) bits.push('cooling off: <b>' + capAxis(diffs[diffs.length - 1].a) + ' ' + Math.round(diffs[diffs.length - 1].d) + ' pts</b>');
+      evo = '<p><b>Taste evolution</b> \u00B7 ' + (bits.length ? bits.join(' \u00B7 ') : 'steady so far') +
+        '<br><span class="muted">' + snaps.length + ' snapshots since ' + new Date(snaps[0].at).toLocaleDateString() + ' \u2014 your identity rewrites itself every time you rate or finish something.</span></p>';
+    } else {
+      evo = '<p class="muted">Taste evolution appears here after your taste has moved a few times \u2014 rate and mark titles watched and watch this space.</p>';
+    }
+    /* you vs other viewers: other profiles on this device + the catalog baseline */
+    var cmp = [];
+    var others = state.profiles.filter(function (x) { return x.id !== p.id && E.AXES.some(function (a) { return (x.taste[a] || 0) > 0; }); });
+    if (others.length) {
+      var mean = E.emptyPreference();
+      others.forEach(function (o) { E.AXES.forEach(function (a) { mean[a] += (o.taste[a] || 0) / others.length; }); });
+      var mn = E.normalizePreference(mean), best = null;
+      E.AXES.forEach(function (a) { var d = (norm[a] || 0) - (mn[a] || 0); if (!best || d > best.d) best = { a: a, d: d }; });
+      if (best && best.d > 0.4) cmp.push('You lean <b>' + capAxis(best.a) + '</b> harder than the other profile' + (others.length > 1 ? 's' : '') + ' on this device (+' + best.d.toFixed(1) + ' vs their average).');
+      var closest = others.map(function (o) { return { name: o.name, c: E.cosine(p.taste, { vector: o.taste }) }; })
+        .sort(function (a, b) { return b.c - a.c; })[0];
+      if (closest && closest.c > 0) cmp.push('Closest taste on this device: <b>' + esc(closest.name) + '</b> (' + Math.round(closest.c * 100) + '% vector overlap).');
+    }
+    var base = catalogBaselineNorm(), bd = null;
+    E.AXES.forEach(function (a) { var d = (norm[a] || 0) - (base[a] || 0); if (!bd || d > bd.d) bd = { a: a, d: d }; });
+    if (bd && bd.d > 0.4) cmp.push('Against the average catalog title, your taste runs <b>' + capAxis(bd.a) + '</b>-heavy (+' + bd.d.toFixed(1) + ').');
+    var qp = p.quizProfile;
+    return '<div class="identity-card"><div class="identity-title">' + dims[0].title + '</div>' +
+      '<p class="muted">Your entertainment identity \u00B7 evolves as you watch and rate</p>' +
+      dims.slice(0, 6).map(function (x) { return '<div class="identity-meter"><span>' + x.name + '</span><b>' + x.pct + '%</b><i><em style="width:' + x.pct + '%"></em></i></div>'; }).join('') +
+      '<div class="identity-stats"><div><b>' + (p.watched || []).length + '</b><span>Watched</span></div>' +
+      '<div><b>' + ratedIds.length + '</b><span>Rated</span></div>' +
+      '<div><b>' + (avgStars === null ? '\u2014' : '\u2605 ' + avgStars.toFixed(1) + '/5') + '</b><span>Avg. rating (from your thumbs)</span></div>' +
+      '<div><b>' + (ratedIds.length ? Math.round(likedN / ratedIds.length * 100) + '%' : '\u2014') + '</b><span>Thumbs-up rate</span></div></div>' +
+      '<p><b>Most watched genres:</b> ' + topKeysN(gc) + '</p>' +
+      '<p><b>Favorite directors & creators:</b> ' + topKeysN(dc) + '</p>' +
+      '<p><b>Favorite actors:</b> ' + (Object.keys(ac).length ? topKeysN(ac) : 'Not enough cast data yet \u2014 it fills in as you rate well-known titles.') + '</p>' +
+      '<p><b>Favorite decades:</b> ' + topKeysN(dec) + '</p>' +
+      (unexpected.length ? '<p><b>Unexpected loves:</b> you keep rating ' + unexpected.map(function (g) { return g + ' (' + lgc[g] + ')'; }).join(' and ') + ' highly, even though ' + (unexpected.length > 1 ? 'they sit' : 'it sits') + ' outside your usual lane.</p>' : '') +
+      evo +
+      (cmp.length ? '<p><b>You vs. other viewers</b><br>' + cmp.join('<br>') + '</p>' : '') +
+      (qp && qp.platforms && qp.platforms.length ? '<p class="muted">You watch on: ' + qp.platforms.map(esc).join(', ') + (qp.mood ? ' \u00B7 drawn to ' + esc(qp.mood.toLowerCase()) : '') + '</p>' : '') +
+      '</div>';
+  }
+
+  /* ---------- achievements v2: progress + seasonal challenges ---------- */
+  function achProgress(p) {
+    var watchedTitles = (p.watched || []).map(anyById).filter(Boolean);
+    var gs = {}, ds = {}, dayCount = {}, maxDay = 0, k;
+    watchedTitles.forEach(function (m) {
+      m.genres.forEach(function (g) { gs[g] = 1; });
+      if (m.year) ds[Math.floor(m.year / 10)] = 1;
+    });
+    (p.events || []).forEach(function (e) {
+      if (e.type !== 'watched') return;
+      var m = anyById(e.id);
+      if (m && !isShow(m)) { k = e.at.slice(0, 10); dayCount[k] = (dayCount[k] || 0) + 1; if (dayCount[k] > maxDay) maxDay = dayCount[k]; }
+    });
+    return {
+      cinephile: [Object.keys(p.ratings || {}).length, 100],
+      horror: [watchedTitles.filter(function (m) { return m.genres.indexOf('Horror') >= 0; }).length, 25],
+      nolan: [watchedTitles.filter(function (m) { return m.director && m.director.indexOf('Christopher Nolan') >= 0; }).length,
+        Math.max(1, MOVIES.filter(function (m) { return m.director && m.director.indexOf('Christopher Nolan') >= 0; }).length)],
+      binge: [(p.watched || []).filter(function (id) { return !!showById[id]; }).length, 5],
+      explorer: [Object.keys(gs).length, 10],
+      historian: [Object.keys(ds).length, 6],
+      perfect: [p.foundPerfect ? 1 : 0, 1],
+      double: [maxDay, 2]
+    };
+  }
+  var ACH2_DEFS = [
+    ['cinephile', 'Cinephile', 'Rate 100 titles'],
+    ['horror', 'Horror Addict', 'Watch 25 horror titles'],
+    ['nolan', 'Nolan Architect', 'Watch every Christopher Nolan film in the catalog'],
+    ['binge', 'Binge Master', 'Mark 5 TV series as watched'],
+    ['explorer', 'Genre Explorer', 'Watch titles across 10 different genres'],
+    ['historian', 'Movie Historian', 'Watch movies across 6 decades'],
+    ['perfect', 'Perfect Match', 'Find a 95%+ taste match in a quiz'],
+    ['double', 'Double Feature', 'Watch two movies in one day']
+  ];
+  function checkAchievements(p) {
+    p.achievements = p.achievements || [];
+    var prog = achProgress(p), changed = false;
+    ACH2_DEFS.forEach(function (a) {
+      var pr = prog[a[0]];
+      if (pr && pr[0] >= pr[1] && p.achievements.indexOf(a[0]) < 0) {
+        p.achievements.push(a[0]); changed = true;
+        toast('Achievement unlocked: ' + a[1]);
+      }
+    });
+    if (changed) save();
+  }
+  var SEASONS = [
+    { id: 'autumn', icon: '\uD83C\uDF42', name: 'Autumn Horror', months: [9, 10, 11], goal: 3, label: 'Watch 3 horror titles (Sep\u2013Nov)', test: function (m) { return m.genres.indexOf('Horror') >= 0; } },
+    { id: 'winter', icon: '\uD83D\uDD6F\uFE0F', name: 'December Comfort', months: [12], goal: 3, label: 'Watch 3 cozy or heartwarming titles (Dec)', test: function (m) { return (m.vector.cozy || 0) >= 6 || (m.vector.heartwarming || 0) >= 6; } },
+    { id: 'summer', icon: '\u2600\uFE0F', name: 'Summer Spectacle', months: [6, 7, 8], goal: 3, label: 'Watch 3 big-scale or high-adrenaline titles (Jun\u2013Aug)', test: function (m) { return (m.vector.epic || 0) >= 6 || (m.vector.adrenaline || 0) >= 7; } },
+    { id: 'spring', icon: '\uD83C\uDF31', name: 'Spring Mysteries', months: [3, 4, 5], goal: 3, label: 'Watch 3 mystery or mind-bending titles (Mar\u2013May)', test: function (m) { return m.genres.indexOf('Mystery') >= 0 || (m.vector.brainy || 0) >= 8; } }
+  ];
+  var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  function seasonalProgress(p, s) {
+    var y = new Date().getFullYear(), n = 0;
+    (p.events || []).forEach(function (e) {
+      if (e.type !== 'watched') return;
+      var d = new Date(e.at);
+      if (d.getFullYear() !== y || s.months.indexOf(d.getMonth() + 1) < 0) return;
+      var m = anyById(e.id);
+      if (m && s.test(m)) n++;
+    });
+    return n;
+  }
+  function seasonalHTML(p) {
+    var cm = new Date().getMonth() + 1;
+    var cards = SEASONS.map(function (s) {
+      var n = seasonalProgress(p, s);
+      var active = s.months.indexOf(cm) >= 0;
+      var done = n >= s.goal;
+      var state = done ? '\uD83C\uDFC6 Complete' : active
+        ? '\u23F3 Limited-time \u00B7 ' + n + '/' + s.goal + ' \u00B7 ends ' + MONTH_NAMES[s.months[s.months.length - 1] - 1]
+        : 'Starts ' + MONTH_NAMES[s.months[0] - 1];
+      return '<div class="achievement ' + (done ? 'earned' : '') + '"><b>' + s.icon + ' ' + s.name + '</b><small>' + s.label + '</small><small>' + state + '</small></div>';
+    }).join('');
+    return '<h4 class="ach-sub">Seasonal collections &amp; limited-time challenges</h4><div class="achievement-grid">' + cards + '</div>';
+  }
+  function achievementsHTML(p) {
+    checkAchievements(p);
+    var prog = achProgress(p);
+    var grid = ACH2_DEFS.map(function (a) {
+      var done = p.achievements.indexOf(a[0]) >= 0;
+      var pr = prog[a[0]] || [0, 1];
+      var pctW = Math.min(100, Math.round(pr[0] / pr[1] * 100));
+      return '<div class="achievement ' + (done ? 'earned' : '') + '"><b>' + (done ? '\uD83C\uDFC6' : '\uD83D\uDD12') + ' ' + a[1] + '</b><small>' + a[2] + '</small>' +
+        '<span class="ach-bar"><i style="width:' + pctW + '%"></i></span><small>' + Math.min(pr[0], pr[1]) + ' / ' + pr[1] + '</small></div>';
+    }).join('');
+    return '<div class="achievement-grid">' + grid + '</div>' + seasonalHTML(p);
+  }
+
+  /* ---------- personality quiz v2: answers seed the taste vector ---------- */
+  var GENRE_BOOST = {
+    'Psychological Thriller': { brainy: 1.4, dark: 0.8 }, 'Mystery': { brainy: 1.2, weird: 0.6 },
+    'Sci-Fi': { brainy: 1.0, epic: 0.8 }, 'Horror': { scary: 1.4, dark: 0.6 },
+    'Crime': { dark: 1.0, brainy: 0.6 }, 'Action': { adrenaline: 1.4 },
+    'Drama': { heartwarming: 0.8, brainy: 0.6 }, 'Comedy': { funny: 1.4 },
+    'Romance': { romantic: 1.4 }, 'Fantasy': { epic: 1.0, weird: 0.6 },
+    'Documentary': { brainy: 0.8, cozy: 0.6 }, 'Animation': { funny: 0.7, heartwarming: 0.7, cozy: 0.5 }
+  };
+  var MOOD_BOOST = { 'Mind-bending twists': 'brainy', 'Complex characters': 'heartwarming', 'Atmosphere and tension': 'dark', 'Big emotional payoff': 'heartwarming', 'Fast-paced action': 'adrenaline', 'Immersive worlds': 'epic', 'Clever humor': 'funny', 'Real-life stories': 'brainy' };
+  function applyQuizBoost(p, a) {
+    var old = p.quizBoost || {};
+    E.AXES.forEach(function (ax) { if (old[ax]) p.taste[ax] = Math.max(0, (p.taste[ax] || 0) - old[ax]); });
+    var nb = {};
+    (a.genres || []).forEach(function (g) {
+      var b = GENRE_BOOST[g];
+      if (b) Object.keys(b).forEach(function (ax) { nb[ax] = (nb[ax] || 0) + b[ax]; });
+    });
+    var ma = MOOD_BOOST[a.mood];
+    if (ma) nb[ma] = (nb[ma] || 0) + 2;
+    E.AXES.forEach(function (ax) { if (nb[ax]) p.taste[ax] = (p.taste[ax] || 0) + nb[ax]; });
+    p.quizBoost = nb;
+  }
+  function openPersonalityQuiz() {
+    var p = profile(); if (!p) return;
+    var a = p.quizProfile ? { platforms: (p.quizProfile.platforms || []).slice(), genres: (p.quizProfile.genres || []).slice(), mood: p.quizProfile.mood || '' } : { platforms: [], genres: [], mood: '' };
+    var step = 0;
+    var qs = [
+      { title: 'What do you watch on?', sub: 'Your streaming platforms \u2014 pick any that apply.', key: 'platforms', multi: true, opts: ['Netflix', 'Prime Video', 'Max', 'Disney+', 'Hulu', 'Apple TV+', 'Peacock', 'Paramount+', 'Theaters / physical media'] },
+      { title: 'What\u2019s your vibe?', sub: 'The genres that pull you in \u2014 pick any that apply.', key: 'genres', multi: true, opts: ['Psychological Thriller', 'Mystery', 'Sci-Fi', 'Horror', 'Crime', 'Action', 'Drama', 'Comedy', 'Romance', 'Fantasy', 'Documentary', 'Animation'] },
+      { title: 'What makes a story unforgettable?', sub: 'One answer \u2014 the thing a great movie or show must have.', key: 'mood', multi: false, opts: ['Mind-bending twists', 'Complex characters', 'Atmosphere and tension', 'Big emotional payoff', 'Fast-paced action', 'Immersive worlds', 'Clever humor', 'Real-life stories'] }
+    ];
+    var ov = el('<div class="overlay center"><div class="welcome-card personality-modal"></div></div>');
+    document.body.appendChild(ov);
+    var box = ov.querySelector('.welcome-card');
+    function draw() {
+      var q = qs[step];
+      box.innerHTML = '<p class="eyebrow">YOUR ENTERTAINMENT DNA \u00B7 STEP ' + (step + 1) + ' OF 3</p><h2>' + q.title + '</h2><p class="muted">' + q.sub + '</p><div class="quiz-choice-grid">' +
+        q.opts.map(function (v) { var on = q.multi ? a[q.key].indexOf(v) >= 0 : a[q.key] === v; return '<button class="quiz-choice ' + (on ? 'selected' : '') + '" data-v="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') +
+        '</div><div class="row-gap"><button class="btn" id="qback" ' + (!step ? 'disabled' : '') + '>Back</button><button class="btn btn-primary" id="qnext">' + (step === 2 ? 'Save personality' : 'Continue') + '</button></div><button class="btn btn-ghost" id="qclose">Maybe later</button>';
+      box.querySelectorAll('[data-v]').forEach(function (b) {
+        b.onclick = function () {
+          var v = b.dataset.v;
+          if (q.multi) { var i = a[q.key].indexOf(v); if (i < 0) a[q.key].push(v); else a[q.key].splice(i, 1); }
+          else a[q.key] = v;
+          draw();
+        };
+      });
+      box.querySelector('#qback').onclick = function () { if (step) { step--; draw(); } };
+      box.querySelector('#qclose').onclick = function () { ov.remove(); };
+      box.querySelector('#qnext').onclick = function () {
+        if (step < 2) { step++; draw(); return; }
+        p.quizProfile = a;
+        applyQuizBoost(p, a);
+        snapshotTaste(p, true);
+        logEvent('personality-quiz', 'quiz-completed');
+        save(); ov.remove(); renderProfile();
+        toast('Entertainment identity updated');
+      };
+    }
+    draw();
+  }
+  var mpBtn = document.querySelector('[data-open-personality]');
+  if (mpBtn) mpBtn.addEventListener('click', function () {
+    if (!state.activeId) openWelcome('main'); else openPersonalityQuiz();
+  });
+
+  /* ---------- roulette shuffle v2: spin, reveal, explain ---------- */
+  var spinning = false;
+  function pickForMode(pool, me, hasTaste) {
+    function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    if (hasTaste && (shuffleMode === 'match' || shuffleMode === 'hidden')) {
+      E.calibrate(MOVIES);
+      var sorted = pool.slice().sort(function (a, b) { return E.matchPercent(me.taste, b) - E.matchPercent(me.taste, a); });
+      return rnd(sorted.slice(0, shuffleMode === 'match' ? 25 : 60));
+    }
+    if (hasTaste && shuffleMode === 'outside') {
+      E.calibrate(MOVIES);
+      var quality = pool.filter(function (m) { return (m.ap || 0) >= 60; });
+      var src = quality.length >= 20 ? quality : pool;
+      var asc = src.slice().sort(function (a, b) { return E.matchPercent(me.taste, a) - E.matchPercent(me.taste, b); });
+      return rnd(asc.slice(0, 50));
+    }
+    var picks = E.shufflePick(pool, { count: 1, minAppeal: 0, rng: Math.random });
+    return picks[0] || pool[0];
+  }
+  function revealShuffle(pick, me, hasTaste) {
+    var why = {
+      surprise: 'A wildcard from across the catalog.', unseen: 'You have not watched or rated this one yet.',
+      outside: 'Deliberately outside your usual taste \u2014 quality held high, comfort zone ignored.',
+      match: 'One of the strongest matches in the catalog for your current taste.',
+      hidden: 'A hidden gem: less famous, but it fits you.', horror: 'A horror pick for a darker kind of night.',
+      date: 'A date-night mix of romance, laughs and low awkward-silence risk.',
+      short: 'All killer, no filler \u2014 under 100 minutes.', critics: 'Critically acclaimed and highly regarded.',
+      throwback: 'Throwback night: a pre-2000 pick.'
+    }[shuffleMode];
+    var extra = '';
+    if (hasTaste) {
+      E.calibrate(MOVIES);
+      extra = ' ' + E.matchPercent(me.taste, pick) + '% match for your taste. ' + E.whyFor(me.taste, pick);
+      var tw = traitWhy(me, pick);
+      if (tw) extra += ' ' + tw;
+    }
+    $('#shuffle-results').innerHTML = '<div class="roulette-reveal reveal-pop"><p class="eyebrow">YOUR ROULETTE REVEAL</p>' + cardHTML(pick) +
+      '<p class="detail-why">' + esc(why + extra) + '</p><button class="btn" id="roulette-again">Spin again</button></div>';
+    refreshQuick(pick.id);
+    $('#roulette-again').addEventListener('click', doShuffle);
+  }
+  function doShuffle() {
+    if (spinning) return;
+    var me = profile();
+    var watched = me ? (me.watched || []) : [], rated = me ? (me.ratings || {}) : {};
+    var hasTaste = !!me && E.AXES.some(function (a) { return (me.taste[a] || 0) > 0; });
+    var genre = sg.value;
+    function genreOk(m) { return !genre || genre === 'All' || m.genres.indexOf(genre) >= 0; }
+    var pool = MOVIES.filter(function (m) {
+      if (!genreOk(m)) return false;
+      switch (shuffleMode) {
+        case 'unseen': return watched.indexOf(m.id) < 0 && !rated[m.id];
+        case 'horror': return m.genres.indexOf('Horror') >= 0;
+        case 'short': return !!m.runtime && m.runtime < 100;
+        case 'date': return m.genres.some(function (g) { return ['Romance', 'Rom-Com', 'Comedy'].indexOf(g) >= 0; }) || (m.vector.romantic || 0) >= 6;
+        case 'critics': return (m.ap || 0) >= 88;
+        case 'throwback': return m.year <= 1999;
+        case 'hidden': return (m.ap || 0) <= 80;
+        default: return true;
+      }
+    });
+    if (shuffleMode === 'throwback' && pool.length < 30) {
+      pool = MOVIES.filter(function (m) { return genreOk(m) && m.year <= 2005; });
+    }
+    if (!pool.length) { toast('No titles fit those filters.'); return; }
+    var pick = pickForMode(pool, me, hasTaste);
+    spinning = true;
+    var box = $('#shuffle-results');
+    box.innerHTML = '<div class="roulette-reveal"><p class="eyebrow">SPINNING THE ROULETTE\u2026</p><div id="spin-slot" class="spin-slot"></div></div>';
+    var slot = $('#spin-slot'), frames = 0;
+    var iv = setInterval(function () {
+      slot.innerHTML = cardHTML(pool[Math.floor(Math.random() * pool.length)]);
+      frames++;
+      if (frames >= 13) { clearInterval(iv); spinning = false; revealShuffle(pick, me, hasTaste); }
+    }, 72);
+  }
+
+  /* ---------- solo quiz finish v2: trait memory + Perfect Match ---------- */
+  function finishSolo() {
+    $('#quiz-play').classList.add('hidden');
+    var tv = quiz.pool === 'shows';
+    var anchors = E.anchorsFromPicks(quiz.picks.map(function (p) { return { chosen: quiz.map[p.chosenId], passed: quiz.map[p.passedId], kind: p.kind }; }));
+    var p = profile();
+    var ignored = Object.keys(p.ratings || {}).filter(function (id) { return p.ratings[id] === -1; });
+    var skipped = {};
+    (p.events || []).filter(function (e) { return e.type === 'skipped' || e.type === 'passed'; }).forEach(function (e) { skipped[e.id] = (skipped[e.id] || 0) + 1; });
+    var repeatedlyIgnored = Object.keys(skipped).filter(function (id) { return skipped[id] >= 2; });
+    var recs = E.buildRecommendations(quiz.fullList, quiz.pref, { excludeIds: quiz.used.concat(p.watched || [], ignored, repeatedlyIgnored), limit: 5, filter: quiz.filter, anchors: anchors });
+    recs.forEach(function (r) { var tw = traitWhy(p, r.movie); if (tw) r.why = r.why + ' ' + tw; });
+    if (recs.some(function (r) { return r.match >= 95; })) p.foundPerfect = true;
+    recordQuiz(p, tv ? 'series' : 'solo', quiz.rounds, quiz.pref, recs.map(function (r) { return r.movie.title; }));
+    snapshotTaste(p);
+    checkAchievements(p);
+    save();
+    var box = $('#quiz-results');
+    box.innerHTML = '<div class="panel"><h2>' + (tv ? 'Your next series' : 'Tonight, you\u2019re watching') + '</h2>' +
+      '<p class="muted">Matched to ' + esc(p.name) + '\u2019s taste from ' + quiz.rounds + ' rounds' + (quiz.ctx ? ' \u00B7 ' + esc(quiz.ctx) : '') + '. Saved to your profile.</p></div>' +
+      recs.map(function (r, i) {
+        return resultCard(r, '<div class="match">' + (i === 0 ? 'Best fit' : 'Strong fit') + '</div><div class="match-label">match for your taste</div>', i, r.match);
+      }).join('') +
+      '<button class="btn btn-primary btn-big" id="quiz-again">Play again</button>' +
+      '<button class="btn btn-ghost btn-big" id="quiz-tweak">Change audience, length or era</button>';
+    box.classList.remove('hidden');
+    recs.forEach(function (r) { refreshQuick(r.movie.id); });
+    $('#quiz-tweak').addEventListener('click', function () {
+      box.classList.add('hidden'); $('#quiz-setup').classList.remove('hidden');
+    });
+    $('#quiz-again').addEventListener('click', function () {
+      box.classList.add('hidden'); $('#quiz-setup').classList.remove('hidden');
+    });
+    goto('quiz');
+  }
 
   /* ---------- init ---------- */
   renderHeaderProfile();
