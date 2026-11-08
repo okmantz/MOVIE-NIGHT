@@ -413,6 +413,69 @@
     return out;
   }
 
+  /* ---------- roulette: ranked, diverse shortlist (v11) ----------
+     Returns the best `count` (default 5) picks for a mode, not one.
+     Score = quality prior + taste fit (when known) + small random jitter
+     so every spin differs, then a greedy diversity pass (limits repeats of
+     primary genre/decade, no repeat directors, no near-duplicate titles). */
+  function rouletteSelect(movies, o) {
+    o = o || {};
+    var rng = o.rng || Math.random, count = Math.max(1, Math.min(8, o.count || 5));
+    var mode = o.mode || 'surprise', taste = o.taste || null;
+    var watched = o.watched || [], rated = o.rated || {}, genre = o.genre;
+    var hasTaste = !!taste && AXES.some(function (a) { return (taste[a] || 0) > 0; });
+    var wset = {}; watched.forEach(function (id) { wset[id] = 1; });
+    function g(m, x) { return m.genres.indexOf(x) >= 0; }
+    function ok(m) {
+      if (genre && genre !== 'All' && !g(m, genre)) return false;
+      if (rated[m.id] === -1) return false;
+      var y = m.year || m.startYear || 0, v = m.vector || {};
+      switch (mode) {
+        case 'unseen': return !wset[m.id] && !rated[m.id];
+        case 'horror': return g(m, 'Horror');
+        case 'short': return !!m.runtime && m.runtime < 100;
+        case 'date': return g(m, 'Romance') || g(m, 'Rom-Com') || (v.romantic || 0) >= 6 || (g(m, 'Comedy') && (v.heartwarming || 0) >= 5);
+        case 'critics': return (m.ap || 0) >= 84;
+        case 'throwback': return y && y <= 1999;
+        case 'hidden': return (m.ap || 0) <= 78 && (m.ap || 0) >= 40;
+        default: return true;
+      }
+    }
+    var pool = movies.filter(ok);
+    if (mode === 'throwback' && pool.length < 30) pool = movies.filter(function (m) { return (!genre || genre === 'All' || g(m, genre)) && (m.year || 0) <= 2005; });
+    if (mode !== 'hidden') { var q = pool.filter(function (m) { return (m.ap || 0) >= 45; }); if (q.length >= count * 6) pool = q; }
+    if (!pool.length) return [];
+    if (hasTaste) calibrate(movies);
+    var scored = pool.map(function (m) {
+      var ap = (m.ap || 50) / 100, mp = hasTaste ? matchPercent(taste, m) / 100 : null, sc;
+      if (mode === 'outside' && hasTaste) sc = 0.55 * ap + 0.45 * (1 - mp);
+      else if (hasTaste) sc = (mode === 'match' ? 0.25 : 0.4) * ap + (mode === 'match' ? 0.75 : 0.6) * mp;
+      else sc = ap;
+      if (wset[m.id]) sc -= 0.25;
+      sc += (rng() - 0.5) * (mode === 'surprise' ? 0.5 : 0.22);
+      return { m: m, s: sc, mp: mp };
+    }).sort(function (a, b) { return b.s - a.s; });
+    var cand = scored.slice(0, Math.max(60, count * 12)), out = [], gc = {}, dirs = {}, dec = {}, stems = {};
+    function stem(t) { return t.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ').slice(0, 2).join(' '); }
+    while (out.length < count && cand.length) {
+      var bi = -1, bv = -1e9;
+      for (var i = 0; i < cand.length; i++) {
+        var c = cand[i], m = c.m, pg = m.genres[0], d = Math.floor((m.year || m.startYear || 2000) / 10);
+        var pen = (gc[pg] || 0) * 0.07 + (dec[d] || 0) * 0.04 + (m.director && dirs[m.director] ? 0.5 : 0) + (stems[stem(m.title)] ? 0.5 : 0);
+        var v = c.s - pen;
+        if (v > bv) { bv = v; bi = i; }
+      }
+      var pick = cand.splice(bi, 1)[0], pm = pick.m;
+      out.push({ movie: pm, score: pick.s, match: pick.mp == null ? null : Math.round(pick.mp * 100) });
+      gc[pm.genres[0]] = (gc[pm.genres[0]] || 0) + 1;
+      var dd = Math.floor((pm.year || pm.startYear || 2000) / 10); dec[dd] = (dec[dd] || 0) + 1;
+      if (pm.director) dirs[pm.director] = 1;
+      stems[stem(pm.title)] = 1;
+    }
+    out.sort(function (a, b) { return b.score - a.score; });
+    return out;
+  }
+
   function normalizePreference(pref) {
     var max = 0;
     AXES.forEach(function (axis) { max = Math.max(max, pref[axis] || 0); });
@@ -490,7 +553,7 @@
     cosine: cosine, cosineArrays: cosineArrays, vectorDistance: vectorDistance,
     emptyPreference: emptyPreference, addMovie: addMovie, preferenceFromPicks: preferenceFromPicks,
     buildRecommendations: buildRecommendations, similarMovies: similarMovies, nextPair: nextPair,
-    shufflePick: shufflePick, normalizePreference: normalizePreference,
+    shufflePick: shufflePick, rouletteSelect: rouletteSelect, normalizePreference: normalizePreference,
     combinePreferences: combinePreferences, matchPercent: matchPercent,
     couplesRecommendations: couplesRecommendations, whyFor: whyFor,
     qualityPrior: qualityPrior, recognizability: recognizability,

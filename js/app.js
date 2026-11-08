@@ -1429,79 +1429,51 @@
 
   /* ---------- roulette shuffle v2: spin, reveal, explain ---------- */
   var spinning = false;
-  function pickForMode(pool, me, hasTaste) {
-    function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-    if (hasTaste && (shuffleMode === 'match' || shuffleMode === 'hidden')) {
-      E.calibrate(MOVIES);
-      var sorted = pool.slice().sort(function (a, b) { return E.matchPercent(me.taste, b) - E.matchPercent(me.taste, a); });
-      return rnd(sorted.slice(0, shuffleMode === 'match' ? 25 : 60));
-    }
-    if (hasTaste && shuffleMode === 'outside') {
-      E.calibrate(MOVIES);
-      var quality = pool.filter(function (m) { return (m.ap || 0) >= 60; });
-      var src = quality.length >= 20 ? quality : pool;
-      var asc = src.slice().sort(function (a, b) { return E.matchPercent(me.taste, a) - E.matchPercent(me.taste, b); });
-      return rnd(asc.slice(0, 50));
-    }
-    var picks = E.shufflePick(pool, { count: 1, minAppeal: 0, rng: Math.random });
-    return picks[0] || pool[0];
-  }
-  function revealShuffle(pick, me, hasTaste) {
-    var why = {
-      surprise: 'A wildcard from across the catalog.', unseen: 'You have not watched or rated this one yet.',
-      outside: 'Deliberately outside your usual taste \u2014 quality held high, comfort zone ignored.',
-      match: 'One of the strongest matches in the catalog for your current taste.',
-      hidden: 'A hidden gem: less famous, but it fits you.', horror: 'A horror pick for a darker kind of night.',
-      date: 'A date-night mix of romance, laughs and low awkward-silence risk.',
-      short: 'All killer, no filler \u2014 under 100 minutes.', critics: 'Critically acclaimed and highly regarded.',
-      throwback: 'Throwback night: a pre-2000 pick.'
-    }[shuffleMode];
-    var extra = '';
-    if (hasTaste) {
-      E.calibrate(MOVIES);
-      extra = ' ' + E.matchPercent(me.taste, pick) + '% match for your taste. ' + E.whyFor(me.taste, pick);
-      var tw = traitWhy(me, pick);
-      if (tw) extra += ' ' + tw;
-    }
-    $('#shuffle-results').innerHTML = '<div class="roulette-reveal reveal-pop"><p class="eyebrow">YOUR ROULETTE REVEAL</p>' + cardHTML(pick) +
-      '<p class="detail-why">' + esc(why + extra) + '</p><button class="btn" id="roulette-again">Spin again</button></div>';
-    refreshQuick(pick.id);
+  var ROULETTE_WHY = {
+    surprise: 'Wildcards from across the catalog', unseen: 'Nothing here is on your watched or rated list',
+    outside: 'Deliberately outside your usual taste, quality held high', match: 'Your strongest matches right now',
+    hidden: 'Lesser-known films worth discovering', horror: 'Horror for a darker night',
+    date: 'Romance and laughs for two', short: 'All killer, no filler: under 100 minutes',
+    critics: 'Critically acclaimed picks', throwback: 'A trip back to before 2000'
+  };
+  function revealShuffle(picks, me, hasTaste) {
+    var medal = ['1', '2', '3', '4', '5'];
+    var top = picks[0];
+    var html = '<div class="roulette-reveal reveal-pop"><p class="eyebrow">YOUR TOP ' + picks.length + ' TONIGHT</p>' +
+      '<p class="muted roulette-sub">' + esc(ROULETTE_WHY[shuffleMode] || '') + '</p>' +
+      '<div class="podium-hero" data-open="' + top.movie.id + '" role="button" tabindex="0">' + coverHTML(top.movie, 'podium-cover') +
+      '<div class="podium-info"><span class="rank-badge">#1 pick</span><h3>' + esc(top.movie.title) + '</h3>' +
+      '<div class="card-sub">' + metaLine(yearText(top.movie), lengthLabel(top.movie), top.movie.rating ? esc(top.movie.rating) : '') + '</div>' +
+      (top.match != null ? '<div class="match-pill">' + top.match + '% match</div>' : '') +
+      '<p class="card-desc podium-desc">' + esc(top.movie.description) + '</p>' +
+      (hasTaste ? '<p class="detail-why">' + esc(E.whyFor(me.taste, top.movie)) + '</p>' : '') + '</div></div>' +
+      '<div class="podium-rest">' + picks.slice(1).map(function (r, i) {
+        return '<button class="podium-row" data-open="' + r.movie.id + '"><span class="rank-num">' + medal[i + 1] + '</span>' + coverHTML(r.movie, 'mini-cover') +
+          '<span class="podium-row-body"><b>' + esc(r.movie.title) + '</b><small>' + metaLine(yearText(r.movie), esc(r.movie.genres.slice(0, 2).join(' / '))) + '</small></span>' +
+          (r.match != null ? '<span class="match-pill sm">' + r.match + '%</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+      '<button class="btn btn-primary btn-big" id="roulette-again">Spin again</button></div>';
+    $('#shuffle-results').innerHTML = html;
+    var hero = $('.podium-hero');
+    if (hero) hero.addEventListener('keydown', function (e) { if (e.key === 'Enter') openDetail(top.movie.id); });
     $('#roulette-again').addEventListener('click', doShuffle);
   }
   function doShuffle() {
     if (spinning) return;
     var me = profile();
-    var watched = me ? (me.watched || []) : [], rated = me ? (me.ratings || {}) : {};
     var hasTaste = !!me && E.AXES.some(function (a) { return (me.taste[a] || 0) > 0; });
-    var genre = sg.value;
-    function genreOk(m) { return !genre || genre === 'All' || m.genres.indexOf(genre) >= 0; }
-    var pool = MOVIES.filter(function (m) {
-      if (!genreOk(m)) return false;
-      switch (shuffleMode) {
-        case 'unseen': return watched.indexOf(m.id) < 0 && !rated[m.id];
-        case 'horror': return m.genres.indexOf('Horror') >= 0;
-        case 'short': return !!m.runtime && m.runtime < 100;
-        case 'date': return m.genres.some(function (g) { return ['Romance', 'Rom-Com', 'Comedy'].indexOf(g) >= 0; }) || (m.vector.romantic || 0) >= 6;
-        case 'critics': return (m.ap || 0) >= 88;
-        case 'throwback': return m.year <= 1999;
-        case 'hidden': return (m.ap || 0) <= 80;
-        default: return true;
-      }
-    });
-    if (shuffleMode === 'throwback' && pool.length < 30) {
-      pool = MOVIES.filter(function (m) { return genreOk(m) && m.year <= 2005; });
-    }
-    if (!pool.length) { toast('No titles fit those filters.'); return; }
-    var pick = pickForMode(pool, me, hasTaste);
+    var picks = E.rouletteSelect(MOVIES, { mode: shuffleMode, genre: sg.value, taste: hasTaste ? me.taste : null,
+      watched: me ? me.watched : [], rated: me ? me.ratings : {}, count: 5 });
+    if (!picks.length) { toast('No titles fit those filters.'); return; }
     spinning = true;
     var box = $('#shuffle-results');
-    box.innerHTML = '<div class="roulette-reveal"><p class="eyebrow">SPINNING THE ROULETTE\u2026</p><div id="spin-slot" class="spin-slot"></div></div>';
+    box.innerHTML = '<div class="roulette-reveal"><p class="eyebrow">SPINNING…</p><div id="spin-slot" class="spin-slot"></div></div>';
     var slot = $('#spin-slot'), frames = 0;
     var iv = setInterval(function () {
-      slot.innerHTML = cardHTML(pool[Math.floor(Math.random() * pool.length)]);
+      slot.innerHTML = '<div class="spin-strip">' + [0, 1, 2].map(function () { return coverHTML(MOVIES[Math.floor(Math.random() * MOVIES.length)], 'spin-cover'); }).join('') + '</div>';
       frames++;
-      if (frames >= 13) { clearInterval(iv); spinning = false; revealShuffle(pick, me, hasTaste); }
-    }, 72);
+      if (frames >= 12) { clearInterval(iv); spinning = false; revealShuffle(picks, me, hasTaste); }
+    }, 80);
   }
 
   /* ---------- solo quiz finish v2: trait memory + Perfect Match ---------- */
