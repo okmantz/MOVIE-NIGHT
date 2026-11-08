@@ -30,6 +30,11 @@
       <button class="btn btn-primary btn-big" data-goto="quiz">✦ &nbsp;Start the Mood Quiz</button>
       <p class="hero-sub">Browse <span id="catalog-count">1,300+</span> hand-picked films with real posters and taste profiles — or let the quiz read your mood.</p>
     </div>
+    <div class="segmented media-switch" id="media-switch" role="tablist" aria-label="Movies or TV shows">
+      <button data-media="movies" class="seg selected">🎬 Movies</button>
+      <button data-media="shows" class="seg">📺 TV Shows</button>
+    </div>
+    <div id="movies-browse">
     <div class="browse-controls">
       <div class="search-row">
         <input id="search" type="search" placeholder="Search titles, directors, vibes…" aria-label="Search movies">
@@ -46,13 +51,51 @@
     <p id="browse-count" class="count-line"></p>
     <div id="movie-grid" class="grid"></div>
     <button id="show-more" class="btn btn-big hidden">Show more movies</button>
+    </div><!-- /movies-browse -->
+    <div id="shows-browse" class="hidden">
+      <div class="panel shows-hero">
+        <h2>📺 Find your next TV show</h2>
+        <p><span id="shows-count">500+</span> series — Netflix originals, HBO prestige, comfort rewatches and hidden gems. Take the Next Series quiz or shuffle a handful.</p>
+        <div class="row">
+          <button class="btn primary" id="start-show-quiz">✦ Next Series Quiz</button>
+        </div>
+        <div class="row shuffle-row">
+          <select id="show-shuffle-genre" aria-label="Shuffle genre"><option value="">Any genre</option></select>
+          <button class="btn" id="show-shuffle-btn">🔀 Shuffle 5 series</button>
+        </div>
+        <div id="show-shuffle-results" class="list-grid"></div>
+      </div>
+      <div class="panel">
+        <h3 class="panel-title">🏆 Top Series — the essential twenty</h3>
+        <p class="fineprint">A curated list, like the movie Top 20. Tap any title for its card.</p>
+        <div id="top-series-list"></div>
+      </div>
+      <div class="browse-controls">
+        <input id="show-search" type="search" placeholder="Search series, genres, creators…" autocomplete="off">
+        <select id="show-sort" aria-label="Sort shows">
+          <option value="title">A – Z</option>
+          <option value="new">Newest first</option>
+          <option value="seasons">Most seasons</option>
+          <option value="episodes">Most episodes</option>
+        </select>
+      </div>
+      <div id="show-genre-chips" class="chips"></div>
+      <p id="show-browse-count" class="count-line"></p>
+      <div id="show-grid" class="grid"></div>
+      <button id="show-more-shows" class="btn btn-big hidden">Show more series</button>
+    </div>
   </section>
 
   <!-- QUIZ -->
   <section id="view-quiz" class="view">
     <div id="quiz-setup" class="panel">
-      <h2>Mood Match Quiz</h2>
-      <p class="muted">Two movies, one tap. Pick the one you're more in the mood for — there are no wrong answers. After the last round we'll line up 3–5 films matched to your taste.</p>
+      <h2 id="quiz-setup-title">Mood Match Quiz</h2>
+      <p class="muted" id="quiz-setup-copy">Two movies, one tap. Pick the one you're more in the mood for — there are no wrong answers. After the last round we'll line up 3–5 films matched to your taste.</p>
+      <p class="label">What are we picking?</p>
+      <div class="segmented" id="quiz-pool" role="tablist" aria-label="Quiz pool">
+        <button data-pool="movies" class="seg selected">🎬 Movies</button>
+        <button data-pool="shows" class="seg">📺 TV Shows</button>
+      </div>
       <p class="label">How many rounds?</p>
       <div class="segmented" id="quiz-rounds">
         <button data-rounds="10" class="seg">10<span>quick</span></button>
@@ -99,6 +142,10 @@
   <!-- MORE -->
   <section id="view-more" class="view">
     <h2>More ways to play</h2>
+    <button class="big-link" data-media-link="shows">
+      <span class="big-link-emoji">📺</span>
+      <span><strong>TV Shows</strong><br><span class="muted">500+ series, the Next Series quiz, Top Series list</span></span>
+    </button>
     <button class="big-link" data-goto="couples">
       <span class="big-link-emoji">💞</span>
       <span><strong>Couples Mode</strong><small>Pass the phone back and forth — we'll find a film you'll both love.</small></span>
@@ -201,6 +248,7 @@
 </nav>
 
 <script src="js/movies.js"></script>
+<script src="js/shows.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/accounts.js"></script>
 <script src="js/app.js"></script>

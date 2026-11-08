@@ -1,11 +1,12 @@
 /* Movie Night service worker — caches the app shell so the app opens offline.
    Poster images are cached opportunistically at runtime. */
-var CACHE = 'movie-night-v5';
+var CACHE = 'movie-night-v6';
 var SHELL = [
   './',
   './index.html',
   './css/styles.css',
   './js/movies.js',
+  './js/shows.js',
   './js/engine.js',
   './js/accounts.js',
   './js/app.js',
