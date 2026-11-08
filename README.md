@@ -2,11 +2,25 @@
 
 **Find tonight's movie without the 45-minute scroll.**
 
-Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 5,500+ films in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
+Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 3,800+ films in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
 
-No build step, no accounts, no server, no API keys. Plain HTML/CSS/JS — open it and it works.
+No build step, no server, no API keys. Plain HTML/CSS/JS — open it and it works. Accounts are **on-device** (see [Accounts](#accounts-on-device-only) below).
 
-## What's new in v3
+## What's new in v4
+
+- **Quality over bulk: 5,551 → 3,804 films.** Three cuts, all deliberate:
+  - **Indian productions removed (551 net).** Films whose Wikipedia sources assert Indian origin or an Indian-language industry (Bollywood/Hindi, Tamil, Telugu, Malayalam, Kannada, Bengali, Marathi, Punjabi and the rest) are out — detected by enriched nationality (501), lead-extract language markers (35) and corroborated category evidence (21, including *All We Imagine as Light* and *Monkey Man*, which carries six Indian production categories). Non-Indian films with Indian settings or casts **stay** (*Life of Pi*, *Four Lions*, *Lion*). Every removal was re-audited by the signal that fired; 6 false positives were restored — two "Bollywood-inspired/style" mentions (*Christmas Karma*, *Bhai's Cafe*) and four Mexican animated films Wikipedia miscategorizes as Indian.
+  - **Westerns trimmed 238 → 119 and Musicals 750 → 156:** core-tier entries plus the best-documented catalog titles; the deep filler is gone.
+  - **964 no-poster catalog titles pruned** to hit the poster target below (core tier, the Top 20 and Owen's list were exempt).
+- **A refined genre taxonomy, 200+ titles each.** New first-class labels, tagged from Wikipedia category evidence (subcategory provenance like *Psychological thriller films*, *Superhero films*, the neo-noir list) plus documented derived rules: **Thriller 841 · Psychological Thriller 290 · Rom-Com 214 · Sci-Fi 499 · Mystery 472 · Animated 479 · Superhero 217 · Documentary 249 · Romance 393 · Action 679 · Historical Drama 205 · Crime 440 · Neo-Noir 248 · Modern Drama 890 · Horror 485 · Horror Thriller 232**. 465 acclaimed titles were added for the thin genres (Documentary +225 from per-year documentary categories and the Oscar winners list, Neo-Noir +67, Historical Drama +64, Superhero +56, Rom-Com +34), every one with a verified poster and a real description. **Family Drama is the one honest miss at 60:** Wikipedia has no family-drama category tree, the family∩drama intersection of the entire 46,000-film source pool is ~75 titles (mostly animated comedies), and Wikidata's family-drama genre covers 19 English-Wikipedia films — so 60 real titles is the maximum that exists, locked in the tests like Western was. (*Modern Drama* = the derived label for contemporary-set drama: tagged Drama, released 2000 or later, and not Historical Drama.)
+- **Posters: 90.5% coverage (3,443 of 3,804).** The big lever was a discovery: the Wikipedia *pageimages* API silently excludes non-free poster images, but the films' infoboxes name the poster files directly — resolving those gained 323 posters the v3 pass missed. Additions all carry verified posters; Owen's-list films are exempt from pruning regardless.
+- **Real descriptions.** Catalog-tier descriptions are no longer bare "A 2023 … film directed by …" one-liners: 2,931 were upgraded to the first 1–2 sentences of the film's Wikipedia lead, cleaned and trimmed (99.9% of the catalog tier; 3 films had no usable extract). Catalog descriptions are adapted from Wikipedia and are licensed **CC BY-SA** (see License).
+- **The quiz engine, rebuilt and proven.** Passed films now subtract at half weight (was 0.35); pair selection is adaptive (concentrated 1–2-axis contrasts early with recognizable titles, dilemmas late, no repeated contrast axis back-to-back, no obscure-vs-obscure early); recommendations add a small core-tier quality prior on near-ties and a diversity rule (max 2 of 5 from one primary genre unless strong matches demand otherwise); couples picks must clear a **per-partner floor** — a minimum match for *both* partners, not just a good average. A simulation harness (`tests/quiz-sim.js`) proves it end-to-end: synthetic users with known tastes take full quizzes, and on the current dataset all four archetypes (horror, rom-com, brainy sci-fi, family/cozy) score **5/5 recommendations at cosine ≥ 0.80 to their true taste** (means 0.86–0.99), three random profiles score 5/5, and couples simulations clear the full 0.55 floor for both partners without relaxing it.
+- **Owen's "Best Movies of All Time" list is protected.** All 89 lines of the list (100 concrete films with trilogies/series expanded) resolve to dataset entries — 20 gaps were added as hand-written core entries (*V for Vendetta*, *Joker* (2019), *I Am Legend*, *Terrifier* (2016), *Die Welle*, the 1997 *Hercules*, the 1968 *Planet of the Apes*, even the 5-minute Pixar short *Presto*) — and a test asserts every one stays.
+- **Accounts, sharing, and a new icon.** Profiles grew into on-device accounts (name + email + PIN, salted-hash storage, full per-account isolation, legacy profiles claimable with their data intact), the app is shareable via one canonical link with a proper install flow, and the app icon is now Owen's custom clapperboard-and-popcorn artwork (`icons/icon.png` + sized variants). Details under [Share it](#share-it) and [Accounts](#accounts-on-device-only).
+- `js/movies.js` shrank to ~2.7 MB and the service-worker cache is `movie-night-v4`.
+
+## What was new in v3
 
 - **The 500-per-genre pass: catalog 1,347 → 5,551 films.** All twelve main genres now clear 500 titles (multi-genre tags counted, as the app's genre chips count them):
 
@@ -36,12 +50,13 @@ No build step, no accounts, no server, no API keys. Plain HTML/CSS/JS — open i
 
 ## Features
 
-- **Browse** — the full library (5,500+ films) in a searchable, genre-filterable grid that renders in chunks so it stays fast. Tap any film for details: story summary, director, runtime, rating, its taste-vector bars, keywords, and **“More like this”** (the six nearest films by vector similarity). Favorite and watchlist buttons on every film.
+- **Browse** — the full library (3,800+ films) in a searchable, genre-filterable grid that renders in chunks so it stays fast. Tap any film for details: story summary, director, runtime, rating, its taste-vector bars, keywords, and **“More like this”** (the six nearest films by vector similarity). Favorite and watchlist buttons on every film.
 - **Mood Match Quiz (solo)** — pick 10, 15 or 20 rounds of two-movies-side-by-side. Early rounds are broad contrasts; later rounds are close calls near your emerging taste, so every tap teaches the app something. “Both sound good” and “Neither” count too. You finish with **3–5 ranked recommendations**, each with a match % and a plain-English *why*.
 - **Couples Mode** 💞 — the signature mode. Two profiles alternate picks on one phone, with a “pass the phone” moment between turns so nobody sees the other's answers. The app averages both taste vectors, adds a bonus for whatever you *both* love, and recommends films with a **match % for each partner**.
 - **Top 20 of All Time** — *Inception* at #1, Owen's essentials, and the rest of the slots drawn from the highest-rated films ever on Rotten Tomatoes — each with a one-line case.
 - **Shuffle** — one tap deals 5 random films (optionally within one genre). Re-shuffle freely.
-- **Profiles** — multiple local profiles with emoji avatars and colors. Each keeps its own favorites, watchlist, quiz history and a **taste profile** (its top mood axes, learned from every quiz taken). Everything is stored in `localStorage` on the device — nothing leaves the phone.
+- **Accounts** — sign up with name + email + PIN (or browse as Guest). Each account keeps its own favorites, watchlist, quiz history and **taste profile**, fully separate from every other account on the same phone. Couples mode can pair any two people on the device. Everything is stored in `localStorage` on the device — nothing leaves the phone (see [Accounts](#accounts-on-device-only)).
+- **Shareable** — one link installs it on anyone's phone; the Profile and More tabs have a **Share this app** button (system share sheet, or copy-the-link fallback).
 - **Installable & offline** — add it to your home screen like a native app; a service worker caches the app shell so it opens offline.
 
 ## Deploy on GitHub Pages (2 minutes)
@@ -55,16 +70,37 @@ No build step, no accounts, no server, no API keys. Plain HTML/CSS/JS — open i
 
 > Every path in the app is relative, so it works from a project subpath (`/movie-night/`) as well as from a domain root.
 
+## Share it
+
+Send anyone the link: **https://okmantz.github.io/MOVIE-NIGHT/**
+
+They open it on their phone and tap **Add to Home Screen** (iPhone: Share → *Add to Home Screen*; Android: ⋮ menu → *Install app*). No app store, no account with Owen, nothing to pay — the app runs entirely on their phone, and they create their own account there. The in-app **Share this app** buttons use this same URL, which lives in exactly one place in the code: the `APP_URL` constant at the top of `js/app.js`. If the Pages URL ever differs, update that one constant.
+
+## Accounts (on-device only)
+
+Movie Night's accounts are **stored on the device only** — there is no server in this version. Signing up saves your name, your email, and a **salted SHA-256 hash** of your PIN/password (Web Crypto; the plaintext is never stored) in the browser's `localStorage`, namespaced per account (`js/accounts.js`). Each account's favorites, watchlist, quiz history and taste profile live under that account's own storage key, invisible to other accounts on the same phone. People who used the pre-accounts version find their old profiles waiting as "unclaimed" — claim one with an email + PIN and all of its data carries over untouched.
+
+What this means in practice: each person who installs the app creates **their own account on their own phone**; accounts do **not** sync across devices, and clearing the browser's site data deletes them. That's the honest trade for zero servers and zero cost.
+
+### Want cloud accounts later?
+
+The upgrade path, when it's worth it:
+
+- Create a **Firebase** (or Supabase) project and enable email/password authentication — it replaces the local hash check with real auth and gives every user a server-side UID.
+- Move the per-account data (`movienight.data.<id>` blobs) into Firestore/Supabase rows keyed by that UID; the data shapes already match one-to-one.
+- On first sign-in, upload the device's local data for that account (the migration pattern in `js/accounts.js` is the template), then read/write through the backend SDK instead of `localStorage`.
+- Keep the guest mode and the whole quiz engine exactly as they are — they never needed the server.
+
 ## How the recommender works
 
 Each movie's vector is ten numbers (0–10): `adrenaline, brainy, scary, funny, heartwarming, dark, romantic, epic, cozy, weird`.
 
-- **Solo quiz:** your preference vector is the sum of the vectors of the films you picked, minus 35% of the ones you passed on (± smaller weights for “both/neither”). Recommendations are the highest **cosine similarity** between your vector and every film *not* shown in the quiz.
-- **Pair selection:** rounds are generated live (`js/engine.js → nextPair`). The first third maximizes vector distance between the two films (broad mapping); the last third picks two films both close to your current vector (hard, informative choices).
-- **Couples:** each partner builds their own preference vector from their own turns. The combined vector is the average of the two normalized vectors **plus a synergy bonus** (+0.75/+1.5) on any axis both partners scored highly — shared loves count extra, one-sided tastes still count, just less. Each recommendation shows its individual match % per partner.
+- **Solo quiz:** your preference vector is the sum of the vectors of the films you picked, minus **half** the vectors of the ones you passed on (± smaller weights for “both/neither”). Recommendations are the highest **cosine similarity** between your vector and every film *not* shown in the quiz, with a small quality prior favoring core-tier/poster titles on near-ties and a diversity rule (no more than 2 of the 5 from one primary genre, unless your strong matches overwhelmingly demand it).
+- **Pair selection:** rounds are generated live (`js/engine.js → nextPair`). Early rounds serve recognizable titles in concentrated contrasts — pairs differing mainly on 1–2 axes, so each answer maps one taste dimension — and never repeat the same contrast axis back-to-back. Late rounds serve dilemmas: two films your current vector likes almost equally.
+- **Couples:** each partner builds their own preference vector from their own turns. The combined vector is the average of the two normalized vectors **plus a synergy bonus** (+0.75/+1.5) on any axis both partners scored highly. On top of that, a couples recommendation must clear a **per-partner floor** (cosine ≥ 0.55 against *each* partner's own taste, relaxed stepwise only if too few films clear it) — a film one partner would hate can't ride in on a high average. Each recommendation shows its individual match % per partner.
 - **More like this:** plain cosine similarity between two films' vectors.
 
-All logic lives in `js/engine.js`, deliberately separated from the UI (`js/app.js`) and covered by tests.
+All logic lives in `js/engine.js`, deliberately separated from the UI (`js/app.js`) and covered by tests — including a simulation harness (`tests/quiz-sim.js`) that plays full quizzes as synthetic users with known tastes and verifies the recommendations against those true tastes.
 
 ## Add or edit movies
 
@@ -104,10 +140,11 @@ Leave `poster: ""` if nothing resolves — the UI automatically draws an elegant
 ## Run the tests
 
 ```bash
-node tests/engine.test.js
+node tests/engine.test.js     # dataset + engine + quiz-quality harness (33 checks)
+node tests/accounts.test.js   # on-device accounts: hashing, isolation, migration (7 checks)
 ```
 
-No dependencies — plain Node. The suite checks the dataset (count, schema, vector ranges, Top 20 integrity) and the engine (pair generation, recommendation counts and exclusions, couples combination and match percentages, shuffle, similarity ranking).
+No dependencies — plain Node. The engine suite checks the dataset (count, schema, vector ranges, Top 20 integrity, the refined-taxonomy minimums, the Indian-removal rule, ≥90% poster coverage, and every title on Owen's best-movies list), the engine (preference weights, pair generation, recommendation counts and exclusions, quality prior, diversity rule, couples floor, shuffle, similarity ranking) and runs the simulation harness end-to-end. The accounts suite exercises the real storage layer in Node (with a `localStorage` shim and Node's Web Crypto): salted hashing, right-PIN/wrong-PIN verification, per-account data isolation, and the legacy-profile migration.
 
 ## Run locally
 
@@ -125,17 +162,26 @@ index.html            App shell (all views)
 css/styles.css        Dark cinematic theme
 js/movies.js          The dataset: MOVIES, TOP20, MOVIE_AXES
 js/engine.js          Quiz + recommendation logic (no DOM, unit-tested)
-js/app.js             UI, routing, profiles, localStorage
-manifest.webmanifest  PWA manifest
-sw.js                 Service worker (offline shell)
-icons/icon.svg        App icon
+js/accounts.js        On-device accounts: salted-hash credentials + per-account storage
+js/app.js             UI, routing, welcome/sign-in, sharing, localStorage
+manifest.webmanifest  PWA manifest (custom clapperboard + popcorn icon set)
+sw.js                 Service worker (offline shell, cache movie-night-v4)
+icons/                icon.svg plus Owen's custom PNG icon (1024/512/192/180/32)
 tools/fetch_posters.py  Verified poster lookup via Wikipedia
 tools/harvest_categories.py  Bulk title harvest from Wikipedia year/genre categories
 tools/enrich_catalog.py  Selection + infobox/summary enrichment for catalog-tier entries
 tools/build_entries.py   Merges enriched entries into js/movies.js
-tests/engine.test.js  Node test suite
+tools/build_v4.py        v4 pipeline: Indian removal, trims, taxonomy retag, additions, posters, prune
+tools/v4_articles.py / v4_harvest.py / v4_lib.py  v4 category + enrichment helpers
+tools/restore_false_positives.py  Audited restorations from the removal pass
+tools/retag_family_drama.py        Derived Family Drama tagging (documented in the file)
+tools/merge_owen_list.py           Guarantees Owen's best-movies list is fully present
+tools/patch_owen_posters.py        Poster retries + tracking-param cleanup for protected titles
+tests/engine.test.js  Dataset + engine suite with the quiz-quality harness
+tests/accounts.test.js  Accounts suite (hashing, isolation, migration)
+tests/quiz-sim.js       Synthetic-user simulation used by the engine suite
 ```
 
 ## License
 
-MIT — see `LICENSE`. Film posters belong to their respective studios; they're referenced by URL from Wikipedia for personal/educational use.
+MIT — see `LICENSE`. Film posters belong to their respective studios; they're referenced by URL from Wikipedia for personal/educational use. **Catalog-tier descriptions are adapted from Wikipedia article lead sections and are licensed CC BY-SA** (attribution: Wikipedia contributors); core-tier descriptions are original to this project.

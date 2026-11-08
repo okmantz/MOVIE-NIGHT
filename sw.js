@@ -1,14 +1,19 @@
 /* Movie Night service worker — caches the app shell so the app opens offline.
    Poster images are cached opportunistically at runtime. */
-var CACHE = 'movie-night-v3';
+var CACHE = 'movie-night-v4';
 var SHELL = [
   './',
   './index.html',
   './css/styles.css',
   './js/movies.js',
   './js/engine.js',
+  './js/accounts.js',
   './js/app.js',
   './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-32.png',
   './manifest.webmanifest'
 ];
 

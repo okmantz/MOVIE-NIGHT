@@ -8,7 +8,8 @@
 <title>Movie Night — Find tonight's movie</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -105,9 +106,10 @@
     </button>
     <button class="big-link" data-goto="profile">
       <span class="big-link-emoji">👤</span>
-      <span><strong>Profiles</strong><small>Your taste profile, favorites, watchlist and quiz history.</small></span>
+      <span><strong>Profile &amp; account</strong><small>Your account, taste profile, favorites, watchlist and quiz history.</small></span>
       <span class="chev">›</span>
     </button>
+    <div id="share-panel"></div>
     <div class="panel about">
       <h3>How Movie Night picks</h3>
       <p class="muted">Every film in the library carries a “taste vector” — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. Your quiz picks build a matching vector, and we recommend the films whose vectors point the same way. Couples mode averages two vectors and gives extra weight to whatever you both love.</p>
@@ -131,7 +133,7 @@
         <button data-rounds="20" class="seg">20<span>10 each</span></button>
       </div>
       <button id="couples-start" class="btn btn-primary btn-big">Start couples quiz</button>
-      <p id="couples-error" class="error hidden">Pick two different profiles — add a second one on the Profiles page if you need to.</p>
+      <p id="couples-error" class="error hidden">Pick two different people — create a second account from the Profile page, or pair up with Guest.</p>
     </div>
     <div id="couples-play" class="hidden">
       <div class="progress-wrap"><div id="couples-progress" class="progress"></div></div>
@@ -160,7 +162,7 @@
       <div id="pf-colors" class="color-row"></div>
       <div class="row-gap">
         <button id="pf-save" class="btn btn-primary">Save profile</button>
-        <button id="pf-new" class="btn btn-ghost">+ New profile</button>
+        <button id="pf-new" class="btn btn-ghost">+ Add account</button>
       </div>
     </div>
     <div id="profile-lists"></div>
@@ -183,6 +185,13 @@
   </div>
 </div>
 
+<!-- WELCOME / ACCOUNTS (card content is built by js/app.js) -->
+<div id="welcome-overlay" class="overlay center hidden" role="dialog" aria-modal="true">
+  <div class="welcome-card" id="welcome-card"></div>
+</div>
+
+<div id="toast" class="toast hidden" role="status"></div>
+
 <nav class="tabbar" aria-label="Main">
   <button data-goto="home" class="tab active"><span>🏠</span>Home</button>
   <button data-goto="quiz" class="tab"><span>🎯</span>Quiz</button>
@@ -193,6 +202,7 @@
 
 <script src="js/movies.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/accounts.js"></script>
 <script src="js/app.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
