@@ -2,16 +2,23 @@
 
 **Find tonight's movie without the 45-minute scroll.**
 
-Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 260+ films in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
+Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 1,300+ films in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
 
 No build step, no accounts, no server, no API keys. Plain HTML/CSS/JS — open it and it works.
 
+## What's new in v2
+
+- **Catalog grew from 263 → 1,300+ films**, prioritized toward 2000–2026 releases (~74% of the library) with the essential classics kept. Every main genre (Action, Sci-Fi, Horror, Thriller, Drama, Comedy, Romance, Crime, Animation, Fantasy, Adventure) now has 100+ entries. A note on scale: the original ask was “500 movies per genre” (~5,000+ films) — at one verified poster, an original description and a hand-scored taste vector per film, that's a small studio's worth of work; v2 ships the largest catalog we could build *without* padding the data with junk or wrong credits.
+- **Real posters for 1,306 of 1,347 films (97.0%)**, each resolved and verified (HTTP 200, image content-type) from Wikipedia at build time. The remaining 41 — mostly pre-1965 classics whose Wikipedia lead images aren't posters — use the generated-cover fallback.
+- **Top 20 rebuilt to spec:** *Inception* at #1; Owen's essentials (*The Matrix, Talk to Me, The Dark Knight, The Return of the King, The Wolf of Wall Street, Into the Spider-Verse, The Hangover, Interstellar*) in the mix; and the remaining slots filled with the highest-rated films ever on Rotten Tomatoes. Note: Rotten Tomatoes publishes no single canonical ordered “best ever” list, so those slots are an editorial selection of the titles that consistently sit at the very top of RT's all-time ratings and critics' consensus.
+- **Polish:** a daily-rotating “Tonight's pick” hero, sticky search + genre chips with counts, sorting (A–Z, newest/oldest, shortest/longest), chunked grid rendering (60 at a time with “Show more”), animated quiz transitions with pick feedback, backdrop-blur detail sheets, visible focus states and `prefers-reduced-motion` support.
+
 ## Features
 
-- **Browse** — the full library in a searchable, genre-filterable grid. Tap any film for details: story summary, director, runtime, rating, its taste-vector bars, keywords, and **“More like this”** (the six nearest films by vector similarity). Favorite and watchlist buttons on every film.
+- **Browse** — the full library (1,300+ films) in a searchable, genre-filterable grid that renders in chunks so it stays fast. Tap any film for details: story summary, director, runtime, rating, its taste-vector bars, keywords, and **“More like this”** (the six nearest films by vector similarity). Favorite and watchlist buttons on every film.
 - **Mood Match Quiz (solo)** — pick 10, 15 or 20 rounds of two-movies-side-by-side. Early rounds are broad contrasts; later rounds are close calls near your emerging taste, so every tap teaches the app something. “Both sound good” and “Neither” count too. You finish with **3–5 ranked recommendations**, each with a match % and a plain-English *why*.
 - **Couples Mode** 💞 — the signature mode. Two profiles alternate picks on one phone, with a “pass the phone” moment between turns so nobody sees the other's answers. The app averages both taste vectors, adds a bonus for whatever you *both* love, and recommends films with a **match % for each partner**.
-- **Top 20 of All Time** — a curated, ranked editorial list with a one-line case for every film.
+- **Top 20 of All Time** — *Inception* at #1, Owen's essentials, and the rest of the slots drawn from the highest-rated films ever on Rotten Tomatoes — each with a one-line case.
 - **Shuffle** — one tap deals 5 random films (optionally within one genre). Re-shuffle freely.
 - **Profiles** — multiple local profiles with emoji avatars and colors. Each keeps its own favorites, watchlist, quiz history and a **taste profile** (its top mood axes, learned from every quiz taken). Everything is stored in `localStorage` on the device — nothing leaves the phone.
 - **Installable & offline** — add it to your home screen like a native app; a service worker caches the app shell so it opens offline.

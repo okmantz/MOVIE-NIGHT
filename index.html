@@ -24,22 +24,27 @@
   <!-- BROWSE -->
   <section id="view-home" class="view active">
     <div class="hero">
-      <h1>What are we<br>watching tonight?</h1>
-      <p>Browse 260+ hand-picked films, or let the quiz read your mood.</p>
+      <p class="hero-eyebrow">★ Tonight's pick</p>
+      <div id="hero-featured" class="hero-featured"></div>
       <button class="btn btn-primary btn-big" data-goto="quiz">✦ &nbsp;Start the Mood Quiz</button>
+      <p class="hero-sub">Browse <span id="catalog-count">1,300+</span> hand-picked films with real posters and taste profiles — or let the quiz read your mood.</p>
     </div>
-    <div class="search-row">
-      <input id="search" type="search" placeholder="Search titles, directors, vibes…" aria-label="Search movies">
-      <select id="sort" aria-label="Sort movies">
-        <option value="title">A – Z</option>
-        <option value="new">Newest first</option>
-        <option value="old">Oldest first</option>
-        <option value="short">Shortest first</option>
-      </select>
+    <div class="browse-controls">
+      <div class="search-row">
+        <input id="search" type="search" placeholder="Search titles, directors, vibes…" aria-label="Search movies">
+        <select id="sort" aria-label="Sort movies">
+          <option value="title">A – Z</option>
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="short">Shortest first</option>
+          <option value="long">Longest first</option>
+        </select>
+      </div>
+      <div id="genre-chips" class="chips" role="tablist" aria-label="Filter by genre"></div>
     </div>
-    <div id="genre-chips" class="chips" role="tablist" aria-label="Filter by genre"></div>
     <p id="browse-count" class="count-line"></p>
     <div id="movie-grid" class="grid"></div>
+    <button id="show-more" class="btn btn-big hidden">Show more movies</button>
   </section>
 
   <!-- QUIZ -->
@@ -72,7 +77,7 @@
   <section id="view-top20" class="view">
     <div class="panel slim">
       <h2>Top 20 of All Time</h2>
-      <p class="muted">Our editorial canon — the twenty films we'd hand a stranger and say “start here.” Ranked, argued over, final.</p>
+      <p class="muted">Our canon: <em>Inception</em> at #1, Owen's essentials, and the rest drawn from the highest-rated films ever on Rotten Tomatoes. Ranked, argued over, final.</p>
     </div>
     <div id="top20-list"></div>
   </section>
