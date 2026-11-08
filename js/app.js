@@ -1,7 +1,13 @@
-/* Movie Night — UI. All state is local (localStorage). No accounts, no server. */
+/* Movie Night — UI. Accounts and all data live on this device only
+   (localStorage, see js/accounts.js) — there is no server in this
+   version, so nothing syncs between phones. */
 (function () {
   'use strict';
   var E = window.MovieEngine;
+  var A = window.MovieAccounts;
+  /* Canonical share/install URL (GitHub Pages). If the Pages URL ever
+     differs, update this ONE constant — every share action uses it. */
+  var APP_URL = 'https://okmantz.github.io/MOVIE-NIGHT/';
   var byId = {};
   MOVIES.forEach(function (m) { byId[m.id] = m; });
 
@@ -43,24 +49,52 @@
       '<div class="card-desc">' + esc(movie.description) + '</div></div></button>';
   }
 
-  /* ---------- persistent state ---------- */
-  var KEY = 'movienight.v1';
+  /* ---------- accounts & persistent state ----------
+     Identity + credentials live in the accounts store (js/accounts.js);
+     each person's favorites/watchlist/history/taste live under their own
+     per-account key. `state.profiles` is the merged in-memory view of
+     every person on this device (accounts + unclaimed legacy profiles +
+     Guest); state.activeId is the SIGNED-IN identity (null when nobody
+     is signed in). Couples mode can pair any two people on the device. */
+  var UI_KEY = 'movienight.ui.v1';
   var EMOJIS = ['🎬', '🍿', '🎭', '🦊', '🐼', '🦉', '🐙', '🌙', '🔥', '💎', '🎧', '🦁'];
   var COLORS = ['#e8b34b', '#e0655a', '#5ab0e0', '#7ac74f', '#b48ce0', '#e08ab5', '#4fd1c5', '#f08c3c'];
-  function blankProfile(name, emoji, color) {
-    return { id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 999), name: name, emoji: emoji, color: color, favorites: [], watchlist: [], history: [], taste: E.emptyPreference() };
+  A.migrateLegacyIfNeeded();
+  function profileFromRecord(rec) {
+    var d = A.getData(rec.id);
+    var taste = E.emptyPreference();
+    if (d.taste) E.AXES.forEach(function (a) { taste[a] = d.taste[a] || 0; });
+    return {
+      id: rec.id, name: rec.name, emoji: rec.emoji, color: rec.color,
+      email: rec.email || null, unclaimed: !!rec.unclaimed, guest: !!rec.guest,
+      favorites: d.favorites || [], watchlist: d.watchlist || [],
+      history: d.history || [], taste: taste
+    };
   }
-  function loadState() {
-    try {
-      var s = JSON.parse(localStorage.getItem(KEY));
-      if (s && s.profiles && s.profiles.length) return s;
-    } catch (e) { /* fall through */ }
-    var p1 = blankProfile('Player 1', '🎬', COLORS[0]);
-    var p2 = blankProfile('Player 2', '🍿', COLORS[2]);
-    return { profiles: [p1, p2], activeId: p1.id, coupleA: p1.id, coupleB: p2.id };
+  var state = { profiles: [], activeId: null, coupleA: null, coupleB: null };
+  function refreshPeople() {
+    A.guestPerson(); /* make sure the Guest person always exists */
+    state.profiles = A.people().map(profileFromRecord);
+    var sid = A.getSession();
+    var me = sid ? state.profiles.find(function (p) { return p.id === sid && !p.unclaimed; }) : null;
+    state.activeId = me ? me.id : null;
+    var ui = {};
+    try { ui = JSON.parse(localStorage.getItem(UI_KEY)) || {}; } catch (e) { /* ignore */ }
+    var legacyPrefs = A.loadStore().legacyPrefs || {};
+    function pick(saved, fallbackIdx) {
+      if (saved && state.profiles.some(function (p) { return p.id === saved; })) return saved;
+      return state.profiles[Math.min(fallbackIdx, state.profiles.length - 1)].id;
+    }
+    state.coupleA = pick(ui.coupleA || legacyPrefs.coupleA, 0);
+    state.coupleB = pick(ui.coupleB || legacyPrefs.coupleB, 1);
   }
-  var state = loadState();
-  function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+  refreshPeople();
+  function save() {
+    state.profiles.forEach(function (p) {
+      A.saveData(p.id, { favorites: p.favorites, watchlist: p.watchlist, history: p.history, taste: p.taste });
+    });
+    try { localStorage.setItem(UI_KEY, JSON.stringify({ coupleA: state.coupleA, coupleB: state.coupleB })); } catch (e) { /* ignore */ }
+  }
   function profile(id) { return state.profiles.find(function (p) { return p.id === (id || state.activeId); }) || state.profiles[0]; }
   function recordQuiz(p, mode, rounds, pref, topTitles) {
     AXES_ADD(p.taste, pref);
@@ -85,10 +119,154 @@
     var o = ev.target.closest('[data-open]');
     if (o) openDetail(o.dataset.open);
   });
-  $('#header-profile').addEventListener('click', function () { goto('profile'); });
+  $('#header-profile').addEventListener('click', function () {
+    if (!state.activeId) openWelcome('main'); else goto('profile');
+  });
   function renderHeaderProfile() {
+    var hp = $('#header-profile');
+    if (!state.activeId) {
+      hp.innerHTML = '<span class="avatar-dot" style="background:#8a8fa3">👤</span>Sign in';
+      return;
+    }
     var p = profile();
-    $('#header-profile').innerHTML = '<span class="avatar-dot" style="background:' + p.color + '">' + p.emoji + '</span>' + esc(p.name);
+    hp.innerHTML = '<span class="avatar-dot" style="background:' + p.color + '">' + p.emoji + '</span>' + esc(p.name);
+  }
+
+  /* ---------- share & toast ---------- */
+  function toast(msg) {
+    var t = $('#toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(t._hide);
+    t._hide = setTimeout(function () { t.classList.add('hidden'); }, 2800);
+  }
+  function copyAppLink() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(APP_URL).then(
+        function () { toast('Link copied — send it to anyone!'); },
+        function () { toast('Copy this link: ' + APP_URL); });
+    } else toast('Copy this link: ' + APP_URL);
+  }
+  function shareApp() {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Movie Night',
+        text: 'Movie Night — the this-or-that movie picker. Take the quiz, get picks you\'ll both love.',
+        url: APP_URL
+      }).catch(function () { /* user cancelled */ });
+    } else copyAppLink();
+  }
+  function renderSharePanel() {
+    var box = $('#share-panel');
+    if (!box) return;
+    box.innerHTML = '<div class="panel"><h3>📤 Share Movie Night</h3>' +
+      '<p class="muted">Send this app to anyone: they open the link on their phone and install it — no app store, no sign-up with you. The app runs entirely on their phone and they make their own account there.</p>' +
+      '<p class="muted"><strong>Install:</strong> iPhone — Share button → <em>Add to Home Screen</em>. Android — ⋮ menu → <em>Install app</em>.</p>' +
+      '<div class="row-gap"><button class="btn btn-primary" id="share-go">Share this app</button><button class="btn" id="share-copy">Copy link</button></div>' +
+      '<p class="muted" style="margin-top:10px">' + APP_URL + '</p></div>';
+    $('#share-go').addEventListener('click', shareApp);
+    $('#share-copy').addEventListener('click', copyAppLink);
+  }
+
+  /* ---------- welcome / sign-in ---------- */
+  function enterAs(id) {
+    A.setSession(id);
+    refreshPeople();
+    save();
+    $('#welcome-overlay').classList.add('hidden');
+    renderHeaderProfile();
+    renderCouplesSetup();
+    goto(state.activeId ? 'home' : 'profile');
+    var p = profile(id);
+    toast(p && p.guest ? 'Browsing as Guest 👤' : 'Welcome, ' + (p ? p.name : '') + ' 🍿');
+  }
+  function signOutToWelcome() {
+    A.setSession(null);
+    refreshPeople();
+    renderHeaderProfile();
+    openWelcome('main');
+  }
+  function openWelcome(mode, claimId) {
+    var card = $('#welcome-card');
+    var folks = A.people();
+    var claimed = folks.filter(function (x) { return !x.unclaimed && !x.guest; });
+    var unclaimed = folks.filter(function (x) { return x.unclaimed; });
+    var errHtml = '<p class="error hidden" id="w-error"></p>';
+    function head(sub) {
+      return '<div class="welcome-head"><div class="pass-emoji">🎬🍿</div><h2>Movie Night</h2>' +
+        '<p class="muted">' + sub + '</p></div>';
+    }
+    function showErr(msg) { var e = $('#w-error'); e.textContent = msg; e.classList.remove('hidden'); }
+    if (mode === 'login') {
+      card.innerHTML = head('Log in to your account on this device.') +
+        (claimed.length
+          ? '<p class="label">Accounts on this device</p><div class="chips auth-chips">' +
+            claimed.map(function (x) { return '<button class="chip" data-wemail="' + esc(x.email) + '">' + x.emoji + ' ' + esc(x.name) + '</button>'; }).join('') + '</div>'
+          : '<p class="muted">No accounts on this device yet — create one instead.</p>') +
+        '<label class="label" for="w-email">Email</label><input id="w-email" class="input" type="email" autocomplete="email" placeholder="you@example.com">' +
+        '<label class="label" for="w-pin">PIN or password</label><input id="w-pin" class="input" type="password" autocomplete="current-password" placeholder="Your PIN">' +
+        errHtml +
+        '<button class="btn btn-primary btn-big" id="w-login-go">Log in</button>' +
+        '<button class="btn btn-ghost btn-big" id="w-back">Back</button>';
+      card.querySelectorAll('[data-wemail]').forEach(function (b) {
+        b.addEventListener('click', function () { $('#w-email').value = b.dataset.wemail; $('#w-pin').focus(); });
+      });
+      $('#w-back').addEventListener('click', function () { openWelcome('main'); });
+      $('#w-login-go').addEventListener('click', function () {
+        A.verifyLogin($('#w-email').value, $('#w-pin').value).then(function (acct) {
+          if (!acct) { showErr('That email and PIN don\'t match an account on this device.'); return; }
+          enterAs(acct.id);
+        }).catch(function () { showErr('Sign-in isn\'t available in this browser (Web Crypto is missing). Try a current browser.'); });
+      });
+    } else if (mode === 'signup' || mode === 'claim') {
+      var target = mode === 'claim' ? A.person(claimId) : null;
+      card.innerHTML = head(mode === 'claim'
+        ? 'Claim <strong>' + esc(target ? target.name : 'this profile') + '</strong> — set an email and PIN to make it your account. All of its favorites, watchlist and history stay exactly as they are.'
+        : 'Create your account. It lives only on this device — no server, nothing leaves your phone.') +
+        (mode === 'signup'
+          ? '<label class="label" for="w-name">Your name</label><input id="w-name" class="input" type="text" maxlength="24" placeholder="e.g. Alex">'
+          : '') +
+        '<label class="label" for="w-email">Email</label><input id="w-email" class="input" type="email" autocomplete="email" placeholder="you@example.com">' +
+        '<label class="label" for="w-pin">PIN or password (4+ characters)</label><input id="w-pin" class="input" type="password" autocomplete="new-password" placeholder="Choose a PIN">' +
+        errHtml +
+        '<button class="btn btn-primary btn-big" id="w-auth-go">' + (mode === 'claim' ? 'Claim & continue' : 'Create account') + '</button>' +
+        '<button class="btn btn-ghost btn-big" id="w-back">Back</button>';
+      $('#w-back').addEventListener('click', function () { openWelcome('main'); });
+      $('#w-auth-go').addEventListener('click', function () {
+        var email = $('#w-email').value, pin = $('#w-pin').value;
+        function done(r) {
+          if (!r.ok) { showErr(r.error); return; }
+          enterAs(r.account.id);
+        }
+        var fail = function () { showErr('Accounts aren\'t available in this browser (Web Crypto is missing). Try a current browser.'); };
+        if (mode === 'claim') A.claimAccount(claimId, { email: email, pin: pin }).then(done).catch(fail);
+        else A.createAccount({
+          name: $('#w-name').value, email: email, pin: pin,
+          emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
+          color: COLORS[Math.floor(Math.random() * COLORS.length)]
+        }).then(done).catch(fail);
+      });
+    } else {
+      card.innerHTML = head('Find a film you — or both of you — will love. Accounts live on this device only: each phone keeps its own, and nothing syncs or leaves the phone.') +
+        (claimed.length ? '<button class="btn btn-primary btn-big" id="w-go-login">Log in</button>' : '') +
+        '<button class="btn ' + (claimed.length ? '' : 'btn-primary ') + 'btn-big" id="w-go-signup">Create account</button>' +
+        '<button class="btn btn-ghost btn-big" id="w-go-guest">Continue as guest</button>' +
+        (unclaimed.length
+          ? '<p class="label" style="margin-top:16px">Profiles from before accounts — claim yours to keep its data:</p>' +
+            unclaimed.map(function (u) { return '<button class="btn" data-wclaim="' + u.id + '" style="margin:0 6px 6px 0">' + u.emoji + ' ' + esc(u.name) + '</button>'; }).join('')
+          : '') +
+        '<div class="welcome-share"><button class="btn" id="w-share">📤 Share this app</button>' +
+        '<p class="muted">Send anyone the link — they open it and tap <em>Add to Home Screen</em> to install. No app store needed.</p></div>';
+      var gl = $('#w-go-login');
+      if (gl) gl.addEventListener('click', function () { openWelcome('login'); });
+      $('#w-go-signup').addEventListener('click', function () { openWelcome('signup'); });
+      $('#w-go-guest').addEventListener('click', function () { enterAs(A.GUEST_ID); });
+      card.querySelectorAll('[data-wclaim]').forEach(function (b) {
+        b.addEventListener('click', function () { openWelcome('claim', b.dataset.wclaim); });
+      });
+      $('#w-share').addEventListener('click', shareApp);
+    }
+    $('#welcome-overlay').classList.remove('hidden');
   }
 
   /* ---------- browse ---------- */
@@ -428,20 +606,14 @@
     var b = ev.target.closest('[data-color]'); if (!b) return;
     formColor = b.dataset.color; buildProfileForm();
   });
-  $('#pf-new').addEventListener('click', function () {
-    editingId = null; $('#pf-name').value = ''; formEmoji = EMOJIS[0]; formColor = COLORS[0];
-    $('#profile-form-title').textContent = 'Add a profile'; buildProfileForm();
-  });
+  $('#pf-new').addEventListener('click', function () { openWelcome('signup'); });
   $('#pf-save').addEventListener('click', function () {
+    if (!state.activeId) { openWelcome('main'); return; }
     var name = $('#pf-name').value.trim() || 'Movie Fan';
-    if (editingId) {
-      var p = profile(editingId); p.name = name; p.emoji = formEmoji; p.color = formColor;
-    } else {
-      var np = blankProfile(name, formEmoji, formColor);
-      state.profiles.push(np); state.activeId = np.id; editingId = np.id;
-      $('#profile-form-title').textContent = 'Edit profile';
-    }
-    save(); renderProfile(); renderHeaderProfile();
+    A.updatePerson(state.activeId, { name: name, emoji: formEmoji, color: formColor });
+    refreshPeople();
+    save(); renderProfile(); renderHeaderProfile(); renderCouplesSetup();
+    toast('Profile saved');
   });
   function tasteBars(p) {
     var norm = E.normalizePreference(p.taste);
@@ -460,17 +632,62 @@
       return '<button class="card" data-open="' + m.id + '">' + coverHTML(m) + '<div class="card-body"><div class="card-title">' + esc(m.title) + '</div></div></button>';
     }).join('') + '</div>';
   }
-  function renderProfile() {
-    var p = profile();
-    $('#profile-switcher').innerHTML = state.profiles.map(function (x) {
-      return '<button class="chip' + (x.id === p.id ? ' active' : '') + '" data-switch="' + x.id + '">' + x.emoji + ' ' + esc(x.name) + '</button>';
-    }).join('');
-    $('#profile-switcher').querySelectorAll('[data-switch]').forEach(function (b) {
-      b.addEventListener('click', function () { state.activeId = b.dataset.switch; save(); renderProfile(); renderHeaderProfile(); });
+  function renderAccountPanel() {
+    var me = state.activeId ? profile(state.activeId) : null;
+    var unclaimed = A.people().filter(function (x) { return x.unclaimed; });
+    var html = '<div class="panel" style="margin-top:0">';
+    if (me && !me.guest) {
+      html += '<h3 style="margin-top:0">👤 Signed in</h3>' +
+        '<p class="muted">' + esc(me.name) + ' · ' + esc(me.email || '') + '<br>' +
+        'Your account lives on this device only — your favorites, watchlist and taste are separate from everyone else\'s on this phone, and nothing syncs to other devices.</p>' +
+        '<div class="row-gap"><button class="btn" id="acct-switch">Switch account</button>' +
+        '<button class="btn" id="acct-logout">Log out</button></div>';
+    } else if (me && me.guest) {
+      html += '<h3 style="margin-top:0">👤 Guest mode</h3>' +
+        '<p class="muted">You\'re browsing as Guest. Your picks save on this device — create an account to keep them under your name.</p>' +
+        '<div class="row-gap"><button class="btn btn-primary" id="acct-signup">Create account</button>' +
+        '<button class="btn" id="acct-login">Log in</button>' +
+        '<button class="btn" id="acct-logout">Exit guest</button></div>';
+    } else {
+      html += '<h3 style="margin-top:0">👤 Not signed in</h3>' +
+        '<p class="muted">Sign in to see your own taste profile, favorites and watchlist.</p>' +
+        '<div class="row-gap"><button class="btn btn-primary" id="acct-login">Log in / Create account</button></div>';
+    }
+    if (unclaimed.length) {
+      html += '<p class="label" style="margin-top:14px">Unclaimed profiles from before accounts</p>' +
+        unclaimed.map(function (u) {
+          return '<button class="btn" data-claim="' + u.id + '" style="margin:0 6px 6px 0">' + u.emoji + ' Claim ' + esc(u.name) + '</button>';
+        }).join('') +
+        '<p class="muted">Claiming keeps all of that profile\'s favorites, watchlist and history.</p>';
+    }
+    html += '<div class="share-row"><button class="btn btn-primary" id="acct-share">📤 Share this app</button></div>' +
+      '<p class="muted">Send the link to anyone — they open it and tap <em>Add to Home Screen</em> to install it on their phone. No app store, no account with you needed.</p></div>';
+    var box = $('#profile-switcher');
+    box.className = '';
+    box.innerHTML = html;
+    var login = $('#acct-login'); if (login) login.addEventListener('click', function () { openWelcome('login'); });
+    var signup = $('#acct-signup'); if (signup) signup.addEventListener('click', function () { openWelcome('signup'); });
+    var sw = $('#acct-switch'); if (sw) sw.addEventListener('click', signOutToWelcome);
+    var lo = $('#acct-logout'); if (lo) lo.addEventListener('click', signOutToWelcome);
+    $('#acct-share').addEventListener('click', shareApp);
+    box.querySelectorAll('[data-claim]').forEach(function (b) {
+      b.addEventListener('click', function () { openWelcome('claim', b.dataset.claim); });
     });
+  }
+  function renderProfile() {
+    renderAccountPanel();
+    var me = state.activeId ? profile(state.activeId) : null;
+    if (!me) {
+      $('#profile-card').innerHTML = '<div class="panel"><h3 style="margin-top:0">Your taste lives with your account</h3>' +
+        '<p class="muted">Log in or create an account above and your favorites, watchlist, quiz history and taste profile will show up here — visible only to you on this device.</p></div>';
+      $('#profile-lists').innerHTML = '';
+      $('#profile-form-title').textContent = 'Sign in to edit your profile';
+      return;
+    }
+    var p = me;
     editingId = p.id;
     $('#pf-name').value = p.name; formEmoji = p.emoji; formColor = p.color;
-    $('#profile-form-title').textContent = 'Edit profile';
+    $('#profile-form-title').textContent = 'Edit your profile';
     buildProfileForm();
     $('#profile-card').innerHTML = '<div class="panel"><div class="profile-head">' +
       '<div class="profile-avatar" style="background:' + p.color + '">' + p.emoji + '</div>' +
@@ -493,4 +710,6 @@
   renderBrowse();
   buildProfileForm();
   renderCouplesSetup();
+  renderSharePanel();
+  if (!state.activeId) openWelcome('main');
 })();
