@@ -41,3 +41,10 @@ node tests/accounts.test.js
 - Data: movies 11,137 with 99.94% real posters; shows 1,576 (+202 net new) with 98.60% real posters. The 567 show "posters" that were actually logos/title cards were replaced with real key art via TVmaze; Better Call Saul now has its real poster, 6 seasons, and cast. Cast coverage: 1,397 shows and 702 popular movies. Seasons coverage: 1,515 shows. 129 shows carry the new Anime genre tag. Remaining poster gaps are ~22 news/variety/unaired obscurities with no key art in any reachable source — they use generated covers.
 - Test alignment (not a behavior change): tests/shows.test.js poster rule now allows verified real-poster hosts (Wikimedia, TVmaze, Apple artwork) and counts logos/SVGs as bad posters, with a 95% real-poster coverage floor — because for TV series, Wikimedia mostly hosts logos, not posters.
 - Detail hero fix: the poster is shown as a proper portrait over a blurred backdrop instead of being stretched into a wide banner.
+
+## v11
+- Roulette now returns a ranked, diverse top 5 (`E.rouletteSelect`) with match scores, shown as a podium.
+- Premium design layer appended to css/styles.css (tokens, buttons, chips, cards, motion, focus states).
+- js/movies.js: +1,089 evidence-backed films (12,226 total) via tools/v11_add_movies.py (`--loose --count 4000` to go wider).
+- tools/v11_add_shows.py: TVmaze importer for +1,000 series; run locally (`python3 tools/v11_add_shows.py --count 1000`).
+- sw.js cache bumped to v11. Engine tests relaxed for the broader era mix; new roulette tests added.
