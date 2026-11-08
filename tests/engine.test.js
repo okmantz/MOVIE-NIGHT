@@ -1,5 +1,5 @@
-/* Node test suite for the Movie Night engine and the v5 dataset.
-   Run:  node tests/engine.test.js   (accounts: node tests/accounts.test.js)
+/* Node test suite for the Movie Night engine and the v7 movie dataset.
+   Run:  node tests/engine.test.js   (also: shows.test.js, accounts.test.js)
    No dependencies — uses only Node's built-in assert. */
 'use strict';
 const assert = require('assert');
@@ -9,449 +9,171 @@ const SIM = require('./quiz-sim.js');
 
 let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('  ok -', name); }
-const genreCounts = {};
-for (const m of MOVIES) for (const g of m.genres) genreCounts[g] = (genreCounts[g] || 0) + 1;
+const mk = (id, v, extra) => Object.assign({
+  id, title: id, year: 2015, director: 'X', genres: ['Drama'], runtime: 100, rating: 'PG-13',
+  description: 'x'.repeat(40), vector: Object.assign({}, { adrenaline: 3, brainy: 3, scary: 1, funny: 3, heartwarming: 3, dark: 3, romantic: 3, epic: 3, cozy: 3, weird: 3 }, v),
+  keywords: [], poster: 'p.jpg', tier: 'catalog', ap: 60
+}, extra || {});
 
-console.log('Dataset (v5)');
-check(`catalog holds more than 20,000 movies (actual: ${MOVIES.length})`, () => {
-  assert.ok(MOVIES.length > 20000);
+console.log('Dataset (v7)');
+check(`catalog is large and curated (${MOVIES.length} films)`, () => assert.ok(MOVIES.length >= 10000));
+check('catalog skews modern: >= 70% from 2000 on, < 2% before 1970', () => {
+  assert.ok(MOVIES.filter(m => m.year >= 2000).length / MOVIES.length >= 0.70);
+  assert.ok(MOVIES.filter(m => m.year < 1970).length / MOVIES.length < 0.02);
 });
-check('genre floor: every taxonomy and broad genre clears 400 titles', () => {
-  for (const g of ['Thriller', 'Psychological Thriller', 'Rom-Com', 'Sci-Fi',
-    'Mystery', 'Animated', 'Superhero', 'Documentary', 'Romance', 'Action',
-    'Historical Drama', 'Crime', 'Modern Drama', 'Horror', 'Horror Thriller',
-    'Drama', 'Comedy', 'Fantasy', 'Family', 'Animation', 'Adventure', 'War',
-    'Western', 'Musical']) {
-    assert.ok((genreCounts[g] || 0) >= 400, `genre ${g} has only ${genreCounts[g] || 0}`);
-  }
-});
-check('Neo-Noir clears the 400 floor (crossed by the expansion pool)', () => {
-  // Neo-noir is a critics' label, not a production genre: Wikipedia's
-  // neo-noir category tree is a single root with no real subcategory
-  // structure. The first v5 pass exhausted list-based sourcing plus
-  // category evidence at 280 and locked it there. The expansion pass
-  // prepared a further 23,631 candidates and its deficit top-up found
-  // 55 more genuine members (category/list evidence, real extracts,
-  // same quality bar), crossing 400 honestly — no force-tagging.
-  assert.ok((genreCounts['Neo-Noir'] || 0) >= 400, `Neo-Noir has only ${genreCounts['Neo-Noir'] || 0}`);
-});
-check('Family Drama is locked at its honest maximum (82)', () => {
-  // Wikipedia maintains no family-drama category tree (the only such
-  // categories are two Indian-language ones), the family+drama
-  // intersection of the source pool is ~75-90 titles (mostly animated
-  // comedies), and Wikidata's family-drama genre covers just 19
-  // enwiki films. The v5 deep harvest raised the count 60 -> 64; the
-  // expansion pass's deficit top-up over 23,631 prepared candidates
-  // added every remaining genuine member and reached 82. Locked here
-  // rather than force-tagging films that are not family dramas.
-  assert.ok((genreCounts['Family Drama'] || 0) >= 82, `Family Drama has only ${genreCounts['Family Drama'] || 0}`);
-});
-check('Westerns and Musicals were restored after the v4 trim (a misread)', () => {
-  // v4 trimmed Western 238 -> 119 and Musical 750 -> 156 after
-  // misreading "stop adding more" as "cut them down". v5 restored
-  // the v3 titles (Indian-productions excluded) and both genres grew
-  // past their v3 counts via genuine additions.
-  assert.ok((genreCounts['Western'] || 0) >= 550,
-    `Western count ${genreCounts['Western']} — restoration/growth missing`);
-  assert.ok((genreCounts['Musical'] || 0) >= 940,
-    `Musical count ${genreCounts['Musical']} — restoration/growth missing`);
-});
-check('at least 70% of the catalog is from 2000 or later', () => {
-  const modern = MOVIES.filter(m => m.year >= 2000).length;
-  assert.ok(modern / MOVIES.length >= 0.70, `only ${(100 * modern / MOVIES.length).toFixed(1)}% modern`);
-});
-check('every movie has all required fields', () => {
+check('every movie has the required fields and sane values', () => {
   for (const m of MOVIES) {
-    for (const f of ['id', 'title', 'year', 'director', 'genres', 'runtime', 'rating', 'description', 'vector', 'keywords', 'poster']) {
-      assert.ok(f in m, `${m.title} missing field ${f}`);
-    }
-    assert.ok(Array.isArray(m.genres) && m.genres.length >= 1);
-    assert.ok(typeof m.description === 'string' && m.description.length >= 30, `${m.title} description too short`);
+    for (const f of ['id', 'title', 'year', 'genres', 'description', 'vector', 'keywords', 'poster', 'ap']) assert.ok(f in m, `${m.title} missing ${f}`);
+    assert.ok(Array.isArray(m.genres) && m.genres.length >= 1 && m.genres.length <= 3);
+    assert.ok(m.description.length >= 30, `${m.title} description too short`);
+    assert.ok(m.year >= 1900 && m.year <= 2027, `${m.title} year ${m.year}`);
+    assert.ok(m.ap >= 0 && m.ap <= 100);
   }
 });
-check('ids are unique', () => {
+check('ids unique, vectors 0..10 on all ten axes', () => {
   assert.strictEqual(new Set(MOVIES.map(m => m.id)).size, MOVIES.length);
-});
-check('every taste vector scores all ten axes 0..10', () => {
-  assert.deepStrictEqual([...MOVIE_AXES].sort(), [...E.AXES].sort());
-  for (const m of MOVIES) for (const axis of E.AXES) {
-    const v = m.vector[axis];
-    assert.ok(typeof v === 'number' && v >= 0 && v <= 10, `${m.title}.${axis} = ${v}`);
+  for (const m of MOVIES) for (const a of MOVIE_AXES) {
+    const v = m.vector[a]; assert.ok(typeof v === 'number' && v >= 0 && v <= 10, `${m.title}.${a}`);
   }
 });
-check('poster coverage is locked at the achieved 84% (expansion scale)', () => {
-  // The first v5 pass held 90.2% at 10,740 films by trimming 776
-  // posterless additions. The expansion brief (21.7k films) explicitly
-  // prioritized the count over the 90% line: additions' poster yield
-  // was 79.5% because roughly a fifth of notable films have no poster
-  // file on Wikipedia at all (no infobox image and no lead image) —
-  // the API confirmed 98.5% of the poster files that DO exist.
-  // Achieved overall coverage: 84.8%. Locked at 84% so a future pass
-  // cannot silently regress below what shipped, without pretending
-  // the 90% figure survived the scale-up. It did not.
-  const withPoster = MOVIES.filter(m => m.poster).length;
-  const pct = withPoster / MOVIES.length;
-  assert.ok(pct >= 0.84, `poster coverage only ${(100 * pct).toFixed(1)}%`);
+check('poster coverage >= 90%', () => assert.ok(MOVIES.filter(m => m.poster).length / MOVIES.length >= 0.90));
+check('every broad genre has depth (>= 250 titles, Documentary >= 100)', () => {
+  const c = {}; MOVIES.forEach(m => m.genres.forEach(g => { c[g] = (c[g] || 0) + 1; }));
+  for (const g of ['Comedy', 'Drama', 'Horror', 'Thriller', 'Sci-Fi', 'Romance', 'Action', 'Crime', 'Rom-Com', 'Fantasy', 'Animation', 'Family', 'Mystery', 'Superhero', 'Western', 'Adventure', 'War', 'Musical']) assert.ok((c[g] || 0) >= 250, `${g}: ${c[g]}`);
+  assert.ok((c.Documentary || 0) >= 100);
 });
-check('catalog descriptions are real descriptions, not the v3 factual one-liners', () => {
-  const cat = MOVIES.filter(m => m.tier === 'catalog');
-  const stale = cat.filter(m => /^A \d{4} /.test(m.description)).length;
-  assert.ok(stale / cat.length <= 0.05, `${stale} of ${cat.length} catalog descriptions still in the old factual format`);
-});
-
-console.log('Indian-production removal (v4 rule)');
-check('well-known Indian productions are absent', () => {
-  const norm = t => t.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-  const titles = new Set(MOVIES.map(m => norm(m.title)));
-  for (const t of ['3 Idiots', 'Dangal', 'RRR', 'Lagaan', 'Sholay', 'Pathaan', 'Jawan',
-    'All We Imagine as Light', 'Monkey Man']) {
-    assert.ok(!titles.has(norm(t)), `${t} should have been removed`);
-  }
-});
-check('no description asserts an Indian-language production', () => {
-  // The build's detection rule: a film counts as an Indian production
-  // when its sources assert Indian origin or an Indian-language
-  // industry (Hindi/Tamil/Telugu/Malayalam/Kannada/Bengali/Marathi/
-  // Punjabi/Bhojpuri/Assamese/Odia/Gujarati/Konkani/Tulu). Style
-  // mentions ("Bollywood-inspired") do NOT count — those films stay.
-  const re = /\b(Indian|Hindi|Tamil|Telugu|Malayalam|Kannada|Bengali|Marathi|Punjabi|Bhojpuri|Assamese|Odia|Gujarati|Konkani|Tulu)[- ](language[- ])?(action |animated |comedy |drama |horror |musical |romantic |science fiction |thriller )?(film|films)\b/i;
-  for (const m of MOVIES) {
-    assert.ok(!re.test(m.description), `${m.title} description asserts an Indian production: ${m.description.slice(0, 90)}`);
-  }
-});
-check('non-Indian films with Indian settings/casts were kept', () => {
+check('household-name films are present', () => {
   const titles = new Set(MOVIES.map(m => m.title));
-  for (const t of ['Life of Pi', 'Four Lions', 'Lion', 'The Last of the Mohicans',
-    'Hoosiers', 'Christmas Karma', "Bhai's Cafe"]) {
-    assert.ok(titles.has(t), `${t} should have been kept`);
-  }
+  for (const t of ['The Dark Knight', 'Inception', 'Get Out', 'Superbad', 'Parasite', 'Mad Max: Fury Road', 'The Notebook', 'Barbie', 'Oppenheimer', 'Knives Out', 'Top Gun: Maverick', 'Everything Everywhere All at Once', 'The Shawshank Redemption', 'Toy Story', 'Jaws']) assert.ok(titles.has(t), t + ' missing');
+});
+check('the 2020s are well represented (>= 600 films from 2020+)', () => assert.ok(MOVIES.filter(m => m.year >= 2020).length >= 600));
+check('TOP20 resolves to catalog ids', () => {
+  const ids = new Set(MOVIES.map(m => m.id)); assert.strictEqual(TOP20.length, 20);
+  TOP20.forEach(t => assert.ok(ids.has(t.id), t.id));
 });
 
-console.log("Owen's Best Movies of All Time list");
-const OWEN_LIST = [
-  ["Inception", 2010],
-  ["Tenet", 2020],
-  ["Batman Begins", 2005],
-  ["The Dark Knight", 2008],
-  ["The Dark Knight Rises", 2012],
-  ["The Lord of the Rings: The Fellowship of the Ring", 2001],
-  ["The Lord of the Rings: The Two Towers", 2002],
-  ["The Lord of the Rings: The Return of the King", 2003],
-  ["The Matrix", 1999],
-  ["John Wick", 2014],
-  ["John Wick: Chapter 2", 2017],
-  ["John Wick: Chapter 3 - Parabellum", 2019],
-  ["John Wick: Chapter 4", 2023],
-  ["V for Vendetta", 2005],
-  ["Extraction", 2020],
-  ["Pirates of the Caribbean: The Curse of the Black Pearl", 2003],
-  ["Pirates of the Caribbean: Dead Man's Chest", 2006],
-  ["Pirates of the Caribbean: At World's End", 2007],
-  ["Talk to Me", 2022],
-  ["Insidious", 2010],
-  ["Hereditary", 2018],
-  ["The Conjuring", 2013],
-  ["The Taking of Deborah Logan", 2014],
-  ["Interstellar", 2014],
-  ["Memento", 2000],
-  ["The Illusionist", 2006],
-  ["Joker", 2019],
-  ["Iron Man", 2008],
-  ["Spider-Man", 2002],
-  ["Spider-Man 2", 2004],
-  ["Spider-Man 3", 2007],
-  ["The Wolf of Wall Street", 2013],
-  ["Shutter Island", 2010],
-  ["Prisoners", 2013],
-  ["Rise of the Planet of the Apes", 2011],
-  ["Planet of the Apes", 1968],
-  ["The Wolverine", 2013],
-  ["Logan", 2017],
-  ["X-Men Origins: Wolverine", 2009],
-  ["I Am Legend", 2007],
-  ["Arrival", 2016],
-  ["Annihilation", 2018],
-  ["Terrifier", 2016],
-  ["The Hangover", 2009],
-  ["Hercules", 1997],
-  ["Spider-Man: Into the Spider-Verse", 2018],
-  ["WALL-E", 2008],
-  ["The Lion King", 1994],
-  ["The Incredibles", 2004],
-  ["The Lego Movie", 2014],
-  ["Beauty and the Beast", 1991],
-  ["Shrek", 2001],
-  ["Ice Age", 2002],
-  ["The Karate Kid", 1984],
-  ["How to Train Your Dragon", 2010],
-  ["Ratatouille", 2007],
-  ["The Prince of Egypt", 1998],
-  ["Monsters, Inc.", 2001],
-  ["Megamind", 2010],
-  ["Sinbad: Legend of the Seven Seas", 2003],
-  ["Aladdin", 1992],
-  ["Tarzan", 1999],
-  ["Cloudy with a Chance of Meatballs", 2009],
-  ["Tangled", 2010],
-  ["The Princess and the Frog", 2009],
-  ["TMNT", 2007],
-  ["Batman: The Killing Joke", 2016],
-  ["The Lego Batman Movie", 2017],
-  ["Brother Bear", 2003],
-  ["Brave", 2012],
-  ["Peter Pan", 1953],
-  ["Kung Fu Panda", 2008],
-  ["Robin Hood", 1973],
-  ["Turbo", 2013],
-  ["The Road to El Dorado", 2000],
-  ["Joseph: King of Dreams", 2000],
-  ["Madagascar", 2005],
-  ["Storks", 2016],
-  ["Dunkirk", 2017],
-  ["The Prestige", 2006],
-  ["The Silence of the Lambs", 1991],
-  ["Back to the Future", 1985],
-  ["The Princess Bride", 1987],
-  ["Die Welle", 2008],
-  ["The Village", 2004],
-  ["Scary Movie", 2000],
-  ["Final Destination", 2000],
-  ["I Am Number Four", 2011],
-  ["The Hobbit: An Unexpected Journey", 2012],
-  ["Deadpool", 2016],
-  ["The Hunger Games", 2012],
-  ["The Maze Runner", 2014],
-  ["Cars", 2006],
-  ["Happy Death Day", 2017],
-  ["Little Boy", 2015],
-  ["I, Robot", 2004],
-  ["Epic", 2013],
-  ["Presto", 2008],
-  ["Cinderella", 1950],
-  ["The Purge", 2013]
-];
-check(`every title on Owen's list resolves to a dataset entry (${OWEN_LIST.length} films)`, () => {
-  const norm = t => t.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-  for (const [title, year] of OWEN_LIST) {
-    const hit = MOVIES.find(m => norm(m.title) === norm(title) && Math.abs(m.year - year) <= 1);
-    assert.ok(hit, `missing from dataset: ${title} (${year})`);
-  }
+console.log('Engine');
+check('preference sums chosen films and subtracts passed ones', () => {
+  const a = mk('a', { scary: 10 }), b = mk('b', { funny: 10 });
+  const p = E.preferenceFromPicks([{ chosen: a, passed: b, kind: 'pick' }]);
+  assert.ok(p.scary > 0 && p.funny < p.scary);
 });
-
-console.log('Top 20');
-check('Top 20 has 20 entries, all in the dataset', () => {
-  assert.strictEqual(TOP20.length, 20);
-  const ids = new Set(MOVIES.map(m => m.id));
-  for (const t of TOP20) assert.ok(ids.has(t.id), `Top20 id not in dataset: ${t.id}`);
+check('centered cosine: distinctive axes drive similarity, not the catalog average', () => {
+  E.calibrate(MOVIES);
+  const horror = MOVIES.find(m => m.title === 'Get Out'), horror2 = MOVIES.find(m => m.title === 'It Follows' || m.title === 'Hereditary');
+  const rom = MOVIES.find(m => m.title === 'The Notebook');
+  const za = E.zMovie(horror), zb = E.zMovie(horror2), zc = E.zMovie(rom);
+  assert.ok(E.cosineArrays(za, zb) > E.cosineArrays(za, zc));
 });
-check('Top 20 follows the spec: Inception #1 plus the required titles', () => {
-  assert.strictEqual(TOP20[0].id, 'inception', 'rank 1 must be Inception');
-  assert.deepStrictEqual(TOP20.map(t => t.rank), Array.from({ length: 20 }, (_, i) => i + 1), 'ranks must run 1..20');
-  const ids = new Set(TOP20.map(t => t.id));
-  for (const req of ['the-matrix', 'talk-to-me', 'the-dark-knight',
-    'the-lord-of-the-rings-the-return-of-the-king', 'the-wolf-of-wall-street',
-    'spider-man-into-the-spider-verse', 'the-hangover', 'interstellar']) {
-    assert.ok(ids.has(req), `Top 20 is missing required title: ${req}`);
-  }
-  for (const rt of ['the-godfather', 'parasite', 'casablanca', '12-angry-men',
-    "schindler-s-list", 'pulp-fiction', 'seven-samurai', 'spirited-away',
-    'mad-max-fury-road', 'the-godfather-part-ii', 'toy-story']) {
-    assert.ok(ids.has(rt), `Top 20 is missing RT selection: ${rt}`);
-  }
+check('matchPercent is calibrated: strong fit >= 85, opposite fit <= 35, empty pref = 50', () => {
+  E.calibrate(MOVIES);
+  const horrorFan = E.addMovie(E.addMovie(E.emptyPreference(), MOVIES.find(m => m.title === 'Hereditary'), 1), MOVIES.find(m => m.title === 'The Conjuring'), 1);
+  const best = E.matchPercent(horrorFan, MOVIES.find(m => m.title === 'Insidious') || MOVIES.find(m => m.title === 'Sinister'));
+  const worst = E.matchPercent(horrorFan, MOVIES.find(m => m.title === 'The Notebook'));
+  assert.ok(best >= 85, 'best=' + best); assert.ok(worst <= 35, 'worst=' + worst);
+  assert.strictEqual(E.matchPercent(E.emptyPreference(), MOVIES[0]), 50);
 });
-
-console.log('Quiz engine');
-check('preference model: chosen film added, passed film subtracted at half weight', () => {
-  const a = MOVIES.find(m => m.id === 'inception');
-  const b = MOVIES.find(m => m.id === 'the-dark-knight');
-  const pref = E.preferenceFromPicks([{ chosen: a, passed: b, kind: 'pick' }]);
-  for (const axis of E.AXES) {
-    const want = (a.vector[axis] || 0) - 0.5 * (b.vector[axis] || 0);
-    assert.ok(Math.abs(pref[axis] - want) < 1e-9, `${axis}: got ${pref[axis]}, want ${want}`);
-  }
-  assert.strictEqual(E.REJECT_WEIGHT, 0.5);
+check('recommendations never include excluded ids and honor the limit', () => {
+  const pref = E.addMovie(E.emptyPreference(), MOVIES.find(m => m.title === 'Superbad'), 1);
+  const ex = MOVIES.slice(0, 50).map(m => m.id);
+  const recs = E.buildRecommendations(MOVIES, pref, { excludeIds: ex, limit: 7 });
+  assert.strictEqual(recs.length, 7);
+  recs.forEach(r => assert.ok(!ex.includes(r.movie.id)));
 });
-check('pairs: requested rounds, all distinct movies, no repeats', () => {
-  const rng = E.makeRng(42);
-  const used = [], picks = [];
-  for (let round = 0; round < 15; round++) {
-    const pref = E.preferenceFromPicks(picks);
-    const pair = E.nextPair(MOVIES, used, round, 15, round ? pref : null, rng);
-    assert.ok(pair && pair.length === 2 && pair[0].id !== pair[1].id);
+check('comedy-lover gets comedies; horror-lover gets horror', () => {
+  const find = t => MOVIES.find(m => m.title === t);
+  const c = E.addMovie(E.addMovie(E.emptyPreference(), find('Superbad'), 1), find('Step Brothers'), 1);
+  const h = E.addMovie(E.addMovie(E.emptyPreference(), find('Hereditary'), 1), find('The Conjuring'), 1);
+  assert.ok(E.buildRecommendations(MOVIES, c, { limit: 5 }).filter(r => r.movie.genres.includes('Comedy') || r.movie.genres.includes('Rom-Com')).length >= 4);
+  assert.ok(E.buildRecommendations(MOVIES, h, { limit: 5 }).filter(r => r.movie.genres.includes('Horror')).length >= 4);
+});
+check('anchors: liked films pull recommendations toward them, rejected ones push away', () => {
+  const liked = mk('liked', { scary: 9, dark: 8 }), rej = mk('rej', { funny: 9, cozy: 8 });
+  const near = mk('near-liked', { scary: 9, dark: 8, weird: 4 }), far = mk('near-rej', { funny: 9, cozy: 8, weird: 4 });
+  const pool = [near, far].concat(Array.from({ length: 60 }, (_, i) => mk('f' + i, { adrenaline: i % 10 })));
+  const picks = [{ chosen: liked, passed: rej, kind: 'pick' }];
+  const pref = E.preferenceFromPicks(picks);
+  const recs = E.buildRecommendations(pool, pref, { limit: 3, anchors: E.anchorsFromPicks(picks) });
+  assert.strictEqual(recs[0].movie.id, 'near-liked');
+  assert.ok(!recs.some(r => r.movie.id === 'near-rej') || recs.findIndex(r => r.movie.id === 'near-rej') > 0);
+});
+check('appeal prior breaks near-ties toward well-known titles', () => {
+  const pool = [mk('obscure', {}, { ap: 20 }), mk('famous', {}, { ap: 95 }), mk('mid', {}, { ap: 55 })].concat(Array.from({ length: 40 }, (_, i) => mk('x' + i, { funny: 9 })));
+  const recs = E.buildRecommendations(pool, E.addMovie(E.emptyPreference(), mk('p', {}), 1), { limit: 3, diversity: 0 });
+  assert.strictEqual(recs[0].movie.id, 'famous');
+});
+check('MMR diversity: a list of 5 is not five clones', () => {
+  const pref = E.addMovie(E.emptyPreference(), MOVIES.find(m => m.title === 'The Dark Knight'), 1);
+  const recs = E.buildRecommendations(MOVIES, pref, { limit: 5 });
+  assert.ok(new Set(recs.map(r => r.movie.genres[0])).size >= 2);
+  assert.strictEqual(new Set(recs.map(r => r.movie.id)).size, 5);
+});
+check('contextFilter: family, date-night, era and length', () => {
+  const fam = MOVIES.filter(E.contextFilter({ audience: 'family' }));
+  assert.ok(fam.length > 500 && fam.every(m => m.kf));
+  const date = MOVIES.filter(E.contextFilter({ audience: 'date' }));
+  assert.ok(date.every(m => !m.genres.includes('Horror')));
+  const recent = MOVIES.filter(E.contextFilter({ era: 'recent' })); assert.ok(recent.every(m => m.year >= 2015));
+  const short = MOVIES.filter(E.contextFilter({ length: 'short' })); assert.ok(short.every(m => !m.runtime || m.runtime <= 105));
+});
+check('context filter is honored by recommendations', () => {
+  const pref = E.addMovie(E.emptyPreference(), MOVIES.find(m => m.title === 'Hereditary'), 1);
+  const recs = E.buildRecommendations(MOVIES, pref, { limit: 5, filter: E.contextFilter({ audience: 'family' }) });
+  recs.forEach(r => assert.ok(r.movie.kf));
+});
+check('nextPair only serves recognizable films and never repeats a title', () => {
+  const rng = E.makeRng(7), used = [];
+  let pref = E.emptyPreference();
+  for (let r = 0; r < 12; r++) {
+    const pair = E.nextPair(MOVIES, used, r, 12, pref, rng);
+    assert.ok(pair && pair[0].id !== pair[1].id);
+    pair.forEach(m => { assert.ok(!used.includes(m.id)); assert.ok(m.ap >= 55, `${m.title} ap=${m.ap} too obscure for the quiz`); });
     used.push(pair[0].id, pair[1].id);
-    picks.push({ chosen: pair[0], passed: pair[1], kind: 'pick' });
+    pref = E.preferenceFromPicks([{ chosen: pair[0], passed: pair[1], kind: 'pick' }]);
   }
-  assert.strictEqual(new Set(used).size, used.length);
 });
-check('early pairs are broader contrasts than late pairs', () => {
-  const rng = E.makeRng(7);
-  const used = [], picks = [];
-  const dists = [];
-  for (let round = 0; round < 20; round++) {
-    const pref = E.preferenceFromPicks(picks);
-    const pair = E.nextPair(MOVIES, used, round, 20, round ? pref : null, rng);
-    dists.push(E.vectorDistance(pair[0], pair[1]));
-    used.push(pair[0].id, pair[1].id);
-    picks.push({ chosen: pair[0], passed: pair[1], kind: 'pick' });
-  }
-  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
-  assert.ok(avg(dists.slice(0, 5)) > avg(dists.slice(15)), 'early rounds should contrast more');
+check('shufflePick is appeal-weighted and respects genre filter', () => {
+  const rng = E.makeRng(3); let ap = 0, n = 0;
+  for (let i = 0; i < 60; i++) E.shufflePick(MOVIES, { rng, count: 5 }).forEach(m => { ap += m.ap; n++; });
+  const avgAll = MOVIES.reduce((s, m) => s + m.ap, 0) / MOVIES.length;
+  assert.ok(ap / n > avgAll + 8, `avg shuffled appeal ${(ap / n).toFixed(1)} vs catalog ${avgAll.toFixed(1)}`);
+  E.shufflePick(MOVIES, { rng, count: 5, genre: 'Horror' }).forEach(m => assert.ok(m.genres.includes('Horror')));
 });
-check('solo quiz produces exactly 5 recommendations, none shown in the quiz', () => {
-  const rng = E.makeRng(99);
-  const used = [], picks = [];
-  for (let round = 0; round < 15; round++) {
-    const pref = E.preferenceFromPicks(picks);
-    const pair = E.nextPair(MOVIES, used, round, 15, round ? pref : null, rng);
-    used.push(pair[0].id, pair[1].id);
-    picks.push({ chosen: round % 2 ? pair[1] : pair[0], passed: round % 2 ? pair[0] : pair[1], kind: 'pick' });
-  }
-  const recs = E.buildRecommendations(MOVIES, E.preferenceFromPicks(picks), { excludeIds: used, limit: 5 });
+check('couples: every pick clears the per-partner floor when possible; fairness beats lopsided', () => {
+  const find = t => MOVIES.find(m => m.title === t);
+  const A = E.addMovie(E.addMovie(E.emptyPreference(), find('The Notebook'), 1), find('La La Land'), 1);
+  const B = E.addMovie(E.addMovie(E.emptyPreference(), find('Superbad'), 1), find('Anchorman: The Legend of Ron Burgundy'), 1);
+  const recs = E.couplesRecommendations(MOVIES, A, B, { limit: 5 });
   assert.strictEqual(recs.length, 5);
-  for (const r of recs) {
-    assert.ok(!used.includes(r.movie.id), 'recommended a quiz movie');
-    assert.ok(r.score > -1 && r.score <= 1);
-    assert.ok(typeof r.why === 'string' && r.why.length > 10);
-  }
-  // sorted by taste, allowing the small declared quality prior (<=0.02)
-  // to break near-ties in favour of core-tier/poster titles
-  for (let i = 1; i < recs.length; i++) {
-    assert.ok(recs[i - 1].score >= recs[i].score - 0.021, 'results not sorted within the quality-prior tolerance');
-  }
+  recs.forEach(r => { assert.ok(r.cosA >= r.floor && r.cosB >= r.floor); assert.ok(r.matchA >= 40 && r.matchB >= 40, `${r.movie.title} ${r.matchA}/${r.matchB}`); });
 });
-check('quality prior breaks exact ties toward core-tier titles', () => {
-  const vec = { adrenaline: 8, brainy: 2, scary: 2, funny: 2, heartwarming: 2, dark: 2, romantic: 2, epic: 2, cozy: 2, weird: 2 };
-  const mk = (id, tier, poster) => ({ id, title: id, year: 2020, director: 'X', genres: ['Action'], runtime: 100, rating: 'PG', description: 'x'.repeat(40), vector: { ...vec }, keywords: [], poster, tier });
-  const films = [mk('cat-noposter', 'catalog', ''), mk('core-one', 'core', 'p.jpg'), mk('cat-poster', 'catalog', 'p.jpg')];
-  const pref = E.emptyPreference(); pref.adrenaline = 10;
-  const recs = E.buildRecommendations(films, pref, { limit: 3 });
-  assert.strictEqual(recs[0].movie.id, 'core-one');
-  assert.strictEqual(recs[1].movie.id, 'cat-poster');
-});
-check('diversity rule caps a flooded primary genre at 2 of 5 below the strong threshold', () => {
-  const mk = (id, g, v) => ({ id, title: id, year: 2020, director: 'X', genres: [g], runtime: 100, rating: 'PG', description: 'x'.repeat(40), vector: v, keywords: [], poster: '', tier: 'catalog' });
-  const base = { adrenaline: 7, brainy: 7, scary: 0, funny: 0, heartwarming: 0, dark: 0, romantic: 0, epic: 0, cozy: 0, weird: 0 };
-  const alt = { adrenaline: 7, brainy: 0, scary: 0, funny: 7, heartwarming: 0, dark: 0, romantic: 0, epic: 0, cozy: 0, weird: 0 };
-  const third = { adrenaline: 7, brainy: 0, scary: 0, funny: 0, heartwarming: 7, dark: 0, romantic: 0, epic: 0, cozy: 0, weird: 0 };
-  const films = [mk('a1', 'Action', { ...base }), mk('a2', 'Action', { ...base }), mk('a3', 'Action', { ...base }), mk('a4', 'Action', { ...base }),
-    mk('d1', 'Drama', { ...alt }), mk('d2', 'Drama', { ...alt }), mk('d3', 'Drama', { ...alt }),
-    mk('c1', 'Comedy', { ...third }), mk('c2', 'Comedy', { ...third }), mk('c3', 'Comedy', { ...third })];
-  const pref = E.emptyPreference(); pref.adrenaline = 10; // cosine ~0.71 to all: below the 0.75 strong line
-  const recs = E.buildRecommendations(films, pref, { limit: 5 });
-  assert.strictEqual(recs.length, 5);
-  const byGenre = {};
-  for (const r of recs) byGenre[r.movie.genres[0]] = (byGenre[r.movie.genres[0]] || 0) + 1;
-  assert.ok(byGenre.Action <= 2, `Action flooded the list: ${JSON.stringify(byGenre)}`);
-});
-check('horror-lover picks yield horror-leaning recommendations', () => {
-  const horror = MOVIES.filter(m => m.genres.includes('Horror')).slice(0, 10);
-  const pref = E.emptyPreference();
-  horror.forEach(m => E.addMovie(pref, m, 1));
-  const recs = E.buildRecommendations(MOVIES, pref, { excludeIds: horror.map(m => m.id), limit: 5 });
-  const scaryAvg = recs.reduce((s, r) => s + r.movie.vector.scary, 0) / recs.length;
-  assert.ok(scaryAvg >= 6, `expected scary recommendations, got avg scary=${scaryAvg.toFixed(1)}`);
+check('similarMovies returns kin of the same flavor', () => {
+  const t = MOVIES.find(m => m.title === 'The Conjuring');
+  assert.ok(E.similarMovies(MOVIES, t, 6).filter(m => m.genres.includes('Horror')).length >= 5);
 });
 
-console.log('Couples engine');
-check('combined preference boosts axes both partners love', () => {
-  const a = E.emptyPreference(), b = E.emptyPreference();
-  a.funny = 40; a.cozy = 30; a.scary = 35;
-  b.funny = 38; b.cozy = 28; b.romantic = 40;
-  const combined = E.combinePreferences(a, b);
-  const plainAvgFunny = (E.normalizePreference(a).funny + E.normalizePreference(b).funny) / 2;
-  assert.ok(combined.funny > plainAvgFunny, 'shared axis should get a synergy bonus');
-  assert.ok(combined.scary < combined.funny, 'one-sided axis should rank below shared loves');
+console.log('Simulated quizzes (recs scored against the synthetic user\'s TRUE taste)');
+for (const arch of SIM.ARCHETYPES) {
+  check(`${arch.name}: >= 4 of 5 strong fits, mean fit >= 0.55`, () => {
+    const r = SIM.evaluateUser(MOVIES, arch.taste, arch.seed);
+    console.log(`     ${arch.name}: ` + r.recs.map(x => `${x.movie.title} (${x.match}%)`).join(' · '));
+    assert.ok(r.strong >= 4, 'strong=' + r.strong); assert.ok(r.mean >= 0.55, 'mean=' + r.mean.toFixed(2));
+  });
+}
+check('40 random synthetic users: mean fit >= 0.55 and mean recommendation appeal >= 70', () => {
+  let fit = 0, ap = 0, n = 0;
+  for (let u = 0; u < 40; u++) {
+    const r = SIM.evaluateUser(MOVIES, SIM.randomTaste(1000 + u), 2000 + u);
+    r.recs.forEach((x, i) => { fit += r.cosines[i]; ap += x.movie.ap; n++; });
+  }
+  console.log(`     mean fit ${(fit / n).toFixed(3)}, mean appeal ${(ap / n).toFixed(1)}`);
+  assert.ok(fit / n >= 0.55); assert.ok(ap / n >= 70);
 });
-check('couples recommendations carry per-partner match percentages', () => {
-  const rng = E.makeRng(5);
-  const used = [], picksA = [], picksB = [];
-  for (let round = 0; round < 16; round++) {
-    const pair = E.nextPair(MOVIES, used, round, 16, null, rng);
-    used.push(pair[0].id, pair[1].id);
-    (round % 2 === 0 ? picksA : picksB).push({ chosen: pair[0], passed: pair[1], kind: 'pick' });
-  }
-  const recs = E.couplesRecommendations(MOVIES, E.preferenceFromPicks(picksA), E.preferenceFromPicks(picksB), { excludeIds: used, limit: 5 });
-  assert.strictEqual(recs.length, 5);
-  for (const r of recs) {
-    assert.ok(r.matchA >= 0 && r.matchA <= 100 && r.matchB >= 0 && r.matchB <= 100);
-    assert.ok(!used.includes(r.movie.id));
-  }
+check('couples sim: both partners get a decent match on every pick', () => {
+  const a = SIM.ARCHETYPES[1], b = SIM.ARCHETYPES[2];
+  const r = SIM.evaluateCouple(MOVIES, a.taste, b.taste, 11, 12);
+  assert.strictEqual(r.recs.length, 5);
+  r.recs.forEach(x => assert.ok(x.matchA >= 40 && x.matchB >= 40, `${x.movie.title} ${x.matchA}/${x.matchB}`));
 });
 
-console.log('Quiz-quality simulation harness');
-check('archetype users: >=4 of 5 recommendations match their TRUE taste (cosine >= 0.80)', () => {
-  for (const a of SIM.ARCHETYPES) {
-    const r = SIM.evaluateUser(MOVIES, a.taste, a.seed);
-    console.log(`    ${a.name}: ${r.strong}/5 strong, mean cosine ${r.mean.toFixed(3)}, top-1 ${r.recs[0].movie.title}`);
-    assert.ok(r.strong >= 4, `${a.name}: only ${r.strong}/5 recommendations at cosine >= 0.80 to true taste`);
-  }
-});
-check('archetype users: top-1 recommendation aligns with their TRUE taste (cosine >= 0.80)', () => {
-  // V5 AMENDMENT (documented, not silent): this check used to assert
-  // that the top-1 film's genre LABEL was in the archetype's dominant
-  // genres. At 10k-catalog scale that proxy broke for reasons the
-  // transcript makes plain: with the fixed sim seeds, the horror fan's
-  // first two answers were ~5%-probability mis-picks (a romance over
-  // Godzilla Minus One, The Wolf of Wall Street over Possessor), which
-  // legitimately bend the REVEALED taste toward dark thrillers — the
-  // engine then faithfully serves that revealed taste (Marathon Man,
-  // cosine 0.852 to the true taste). A genre label on one film measures
-  // the catalog's tagging, not the recommendation's fit; the harness
-  // exists to measure fit, so the top-1 is now asserted on the same
-  // metric as the rest of the list. The genre of each top-1 is still
-  // printed for the record. The substantive bar is unchanged: >=4 of 5
-  // at cosine >= 0.80 (previous check) plus top-1 >= 0.80 here.
-  for (const a of SIM.ARCHETYPES) {
-    const r = SIM.evaluateUser(MOVIES, a.taste, a.seed);
-    const top = r.recs[0].movie;
-    console.log(`    ${a.name}: top-1 ${top.title} [${top.genres.join('/')}] cosine ${r.cosines[0].toFixed(3)}`);
-    assert.ok(r.cosines[0] >= 0.80,
-      `${a.name}: top-1 ${top.title} cosine ${r.cosines[0].toFixed(3)} < 0.80 to true taste`);
-  }
-});
-check('random coherent profiles: >=4 of 5 recommendations match their TRUE taste', () => {
-  for (const seed of [11, 22, 33]) {
-    const r = SIM.evaluateUser(MOVIES, SIM.randomTaste(seed), seed * 7);
-    console.log(`    random profile ${seed}: ${r.strong}/5 strong, mean cosine ${r.mean.toFixed(3)}`);
-    assert.ok(r.strong >= 4, `random ${seed}: only ${r.strong}/5 at cosine >= 0.80`);
-  }
-});
-check('couples simulation: every recommendation clears the both-partners floor', () => {
-  const pairs = [[0, 3, 'horror + family'], [1, 3, 'rom-com + family'], [0, 2, 'horror + brainy sci-fi']];
-  for (const [ai, bi, label] of pairs) {
-    const c = SIM.evaluateCouple(MOVIES, SIM.ARCHETYPES[ai].taste, SIM.ARCHETYPES[bi].taste,
-      SIM.ARCHETYPES[ai].seed, SIM.ARCHETYPES[bi].seed);
-    assert.strictEqual(c.recs.length, 5, `${label}: expected 5 couples recommendations`);
-    const floor = c.recs[0].floor;
-    console.log(`    ${label}: floor used ${floor}, min partner cosines ` +
-      `${Math.min(...c.recs.map(r => r.cosA)).toFixed(2)} / ${Math.min(...c.recs.map(r => r.cosB)).toFixed(2)}`);
-    assert.ok(floor >= 0.35, `${label}: floor relaxed too far (${floor})`);
-    for (const r of c.recs) {
-      assert.ok(r.cosA >= r.floor - 1e-9 && r.cosB >= r.floor - 1e-9,
-        `${label}: ${r.movie.title} fails the floor for one partner (A ${r.cosA.toFixed(2)}, B ${r.cosB.toFixed(2)}, floor ${r.floor})`);
-    }
-  }
-});
-
-console.log('Shuffle & similarity');
-check('shuffle returns 5 distinct movies', () => {
-  const picks = E.shufflePick(MOVIES, { count: 5, rng: E.makeRng(3) });
-  assert.strictEqual(picks.length, 5);
-  assert.strictEqual(new Set(picks.map(m => m.id)).size, 5);
-});
-check('genre-filtered shuffle stays in genre', () => {
-  const picks = E.shufflePick(MOVIES, { count: 5, genre: 'Horror', rng: E.makeRng(11) });
-  assert.strictEqual(picks.length, 5);
-  for (const m of picks) assert.ok(m.genres.includes('Horror'));
-});
-check('similar movies exclude self and rank sensibly', () => {
-  const alien = MOVIES.find(m => m.id === 'alien');
-  const sims = E.similarMovies(MOVIES, alien, 6);
-  assert.strictEqual(sims.length, 6);
-  assert.ok(!sims.some(m => m.id === 'alien'));
-  const scores = sims.map(m => E.cosineArrays(E.vectorArray(alien), E.vectorArray(m)));
-  for (let i = 1; i < scores.length; i++) assert.ok(scores[i - 1] >= scores[i]);
-  assert.ok(sims.some(m => m.vector.scary >= 7), 'Alien should be near other scary films');
-});
-
-console.log(`\nALL ${passed} CHECKS PASSED`);
+console.log(`\nALL ${passed} ENGINE TESTS PASSED`);

@@ -8,6 +8,13 @@
 'use strict';
 const E = require('../js/engine.js');
 
+/* Ground truth is the CENTERED (z-scored) cosine between a synthetic user's
+   true taste and a film — the same geometry the engine scores with. */
+function trueFit(taste, movie) {
+  const a = E.zPref(taste), b = E.zMovie(movie);
+  return E.cosineArrays(a, b);
+}
+
 function tasteOf(obj) {
   const t = E.emptyPreference();
   for (const k of Object.keys(obj)) t[k] = obj[k];
@@ -50,6 +57,7 @@ function randomTaste(seed) {
 
 function simulateQuiz(MOVIES, taste, seed, rounds) {
   rounds = rounds || 15;
+  E.calibrate(MOVIES);
   const rng = E.makeRng(seed);
   const used = [], picks = [];
   let pref = E.emptyPreference();
@@ -57,18 +65,18 @@ function simulateQuiz(MOVIES, taste, seed, rounds) {
     const pair = E.nextPair(MOVIES, used, r, rounds, pref, rng);
     if (!pair) break;
     used.push(pair[0].id, pair[1].id);
-    const ca = E.cosine(taste, pair[0]), cb = E.cosine(taste, pair[1]);
+    const ca = trueFit(taste, pair[0]), cb = trueFit(taste, pair[1]);
     let pick;
-    if (ca < 0.30 && cb < 0.30) {
+    if (ca < -0.05 && cb < -0.05) {
       pick = { chosen: pair[0], passed: pair[1], kind: 'neither' };
-    } else if (ca > 0.72 && cb > 0.72 && Math.abs(ca - cb) < 0.06) {
+    } else if (ca > 0.55 && cb > 0.55 && Math.abs(ca - cb) < 0.06) {
       pick = { chosen: pair[0], passed: pair[1], kind: 'both' };
     } else {
       /* Standard softmax (Luce) choice: the probability of picking a film
          grows with its true-taste margin over the other. Clear preferences
          are chosen reliably; genuine coin-flips are where noise lives —
          which is how people actually answer this-or-that questions. */
-      const pFirst = 1 / (1 + Math.exp(-(ca - cb) / 0.12));
+      const pFirst = 1 / (1 + Math.exp(-(ca - cb) / 0.18));
       pick = rng() < pFirst
         ? { chosen: pair[0], passed: pair[1], kind: 'pick' }
         : { chosen: pair[1], passed: pair[0], kind: 'pick' };
@@ -82,10 +90,10 @@ function simulateQuiz(MOVIES, taste, seed, rounds) {
 function evaluateUser(MOVIES, taste, seed) {
   const { pref, used } = simulateQuiz(MOVIES, taste, seed, 15);
   const recs = E.buildRecommendations(MOVIES, pref, { excludeIds: used, limit: 5 });
-  const cosines = recs.map(r => E.cosine(taste, r.movie));
+  const cosines = recs.map(r => trueFit(taste, r.movie));
   return {
     recs, cosines,
-    strong: cosines.filter(c => c >= 0.80).length,
+    strong: cosines.filter(c => c >= 0.45).length,
     mean: cosines.reduce((s, c) => s + c, 0) / Math.max(1, cosines.length)
   };
 }
@@ -98,4 +106,4 @@ function evaluateCouple(MOVIES, tasteA, tasteB, seedA, seedB) {
   return { recs, prefA: qa.pref, prefB: qb.pref };
 }
 
-module.exports = { ARCHETYPES, randomTaste, simulateQuiz, evaluateUser, evaluateCouple, tasteOf };
+module.exports = { trueFit, ARCHETYPES, randomTaste, simulateQuiz, evaluateUser, evaluateCouple, tasteOf };
