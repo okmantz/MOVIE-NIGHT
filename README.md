@@ -2,11 +2,20 @@
 
 **Find tonight's movie without the 45-minute scroll.**
 
-Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 21,500+ films in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
+Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 11,000+ films (and 1,200+ series) in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
 
 No build step, no server, no API keys. Plain HTML/CSS/JS — open it and it works. Accounts are **on-device** (see [Accounts](#accounts-on-device-only) below).
 
-## What's new in v6 — TV Shows 📺
+## What's new in v7 — a curated, American-first library and a smarter picker
+
+- **Library audit (`js/movies.js`: 11,002 films, down from 20,000+).** The old list was a Wikipedia sweep: great for coverage, bad for "what should I watch tonight" — it was full of 1940s Spanish horror, regional-industry films and obscure shorts. v7 scores every title on *evidence* (core-tier hand-picks, vote counts from public datasets used only for scoring — never shipped, star power, awards, studio/franchise cues) and *context* (era, American/UK-Ireland origin, poster, a real description), and keeps only titles with real evidence of being watched. Result: 72% of the library is 2000 or later, <1% predates 1970, and every film carries an internal appeal score `ap` (0–100) the app uses to rank browse, pick Tonight's Pick, weight Shuffle and choose quiz pairs. Run `python3 tools/rebuild_movies_v7.py --help` to re-run or loosen the cutoffs (`--min-appeal`, `--min-evidence`).
+- **About the 25,000 target:** the audit could not honestly reach 25,000 films. Quality sources for new titles were unreachable from the build environment, and the earlier catalog was already close to every notable film Wikipedia lists — getting to 25k would mean re-admitting exactly the obscure, foreign and low-evidence films this release removes. To grow the catalog, loosen `--min-appeal`/`--min-evidence` or feed new harvests through `tools/v5_expand.py` (needs Wikipedia access) and re-run the rebuild.
+- **TV (`js/shows.js`: 1,270 series, up from 778).** Non-series entries (celebrities, crimes, films, a FIFA World Cup page…) and foreign/obscure filler were removed; wrong years were repaired; ~640 well-known American-audience series were added from the hand-curated `tools/shows_v7_curated.txt` (original run years and networks only — no "currently streaming on" claims). Added series without a verified poster use the generated cover. Re-run: `python3 tools/rebuild_shows_v7.py --src <v6 shows.js>`.
+- **New recommendation engine (`js/engine.js`).** (1) *Centered scoring* — vectors are standardized against the catalog before comparing, so similarity reflects what is distinctive instead of the shared average. (2) *Anchors* — the films you actually chose/rejected pull recommendations toward/away from their nearest neighbors, not just your averaged taste. (3) *Appeal prior* — near-ties resolve toward well-known films. (4) *MMR diversity* — five good, different films instead of five clones. (5) *Context filters* — Just me / Date night / Family, length, and era before the quiz. (6) *Calibrated match %* — strong fits read 90%+, average films ~50%. (7) *Quiz pairs* are only ever films a typical viewer knows. (8) *Couples* — a hard per-partner floor, then ranking by fairness (half average fit, half the *worse* partner's fit). In simulated quizzes (tests/quiz-sim.js, same noisy synthetic users for both) the new engine recommended better-fitting films (mean fit 0.62 vs 0.59, 90th vs 88th percentile) that are far better known (mean appeal ~81 vs ~63) and more varied.
+- **Redesign.** Quieter dark theme with refined cards and glass header, SVG navigation, a desktop top nav, a "Your top pick" hero with a match ring on results, a pre-quiz *who's watching / how long / which era* step, and Top Picks as the default browse order.
+- Service-worker cache is `movie-night-v7`.
+
+## What was new in v6 — TV Shows 📺
 
 - **A whole second catalog: the TV Shows section.** Browse now has a **Movies | TV Shows** switch at the top (and a TV Shows entry in the More tab). The shows side has its own searchable, genre-chipped, sortable browse (A–Z, newest, most seasons, most episodes), its own detail view, a curated **Top Series** twenty, a **Series Shuffle**, and a **Next Series Quiz** — the same this-or-that engine, pointed at series. Show favorites and watchlist are stored per account in their own lists (`showFavorites` / `showWatchlist`), so they never collide with movie lists. Couples Mode stays movies-only.
 - **The dataset (`js/shows.js`): SHOWS_COUNT series**, built the same way as the films — nothing invented. SHOWS_CORE hand-picked core entries (the icons: *Breaking Bad*, *The Sopranos*, *The Wire*, *Dark*, *Squid Game*, *Chernobyl*, *Arcane*, *Shōgun*…) carry curated genres/keywords and hand-set taste vectors for the biggest titles; the rest were harvested from Wikipedia's streaming "original programming" lists (Netflix, HBO/Max, Prime Video, Hulu, Disney+, Paramount+, Peacock, AMC, Syfy…) and TV genre/decade category trees, then quality-gated on article substance (length + a real lead extract), a mapped genre and a known start year — the same notability proxy as the films, called what it is. **Era split: ERA_SPLIT.**
@@ -115,14 +124,15 @@ The upgrade path, when it's worth it:
 
 ## How the recommender works
 
-Each movie's vector is ten numbers (0–10): `adrenaline, brainy, scary, funny, heartwarming, dark, romantic, epic, cozy, weird`.
+Each film/series has a taste vector — ten numbers (0–10): `adrenaline, brainy, scary, funny, heartwarming, dark, romantic, epic, cozy, weird` — and an internal appeal score `ap` (0–100).
 
-- **Solo quiz:** your preference vector is the sum of the vectors of the films you picked, minus **half** the vectors of the ones you passed on (± smaller weights for “both/neither”). Recommendations are the highest **cosine similarity** between your vector and every film *not* shown in the quiz, with a small quality prior favoring core-tier/poster titles on near-ties and a diversity rule (no more than 2 of the 5 from one primary genre, unless your strong matches overwhelmingly demand it).
-- **Pair selection:** rounds are generated live (`js/engine.js → nextPair`). Early rounds serve recognizable titles in concentrated contrasts — pairs differing mainly on 1–2 axes, so each answer maps one taste dimension — and never repeat the same contrast axis back-to-back. Late rounds serve dilemmas: two films your current vector likes almost equally.
-- **Couples:** each partner builds their own preference vector from their own turns. The combined vector is the average of the two normalized vectors **plus a synergy bonus** (+0.75/+1.5) on any axis both partners scored highly. On top of that, a couples recommendation must clear a **per-partner floor** (cosine ≥ 0.55 against *each* partner's own taste, relaxed stepwise only if too few films clear it) — a film one partner would hate can't ride in on a high average. Each recommendation shows its individual match % per partner.
-- **More like this:** plain cosine similarity between two films' vectors.
+- **Solo quiz:** each round shows two well-known titles. Your picks add the chosen vector and subtract half of the passed one (± small weights for "both/neither"). The engine then z-scores everything against the catalog, ranks every unseen title by `0.72 × taste fit + 0.28 × similarity to the films you chose − a penalty for similarity to the ones you rejected + a small appeal bonus`, applies the audience/length/era filter, and picks the final five with maximal-marginal-relevance re-ranking so they differ from each other.
+- **Pair selection (`nextPair`):** early rounds ask about very recognizable titles in concentrated contrasts (two films differing mainly on one or two axes); the middle blends contrast with your emerging taste; late rounds serve near-tie dilemmas. A contrast axis is never repeated back-to-back and obscure titles are never asked about.
+- **Couples:** each partner builds their own preference from their own turns. A recommendation must clear a per-partner floor (centered fit ≥ 0.25 for *each* partner, relaxed stepwise only if too few clear it); survivors are ranked by fairness — half the mean fit, half the worse partner's fit — then diversified. Each result shows both partners' match %.
+- **More like this:** centered cosine similarity plus a small appeal bonus.
+- **Match %:** `50 + 50·tanh(1.25 × centered cosine)` — 50% is an average film for you; 90%+ is genuinely strong.
 
-All logic lives in `js/engine.js`, deliberately separated from the UI (`js/app.js`) and covered by tests — including a simulation harness (`tests/quiz-sim.js`) that plays full quizzes as synthetic users with known tastes and verifies the recommendations against those true tastes.
+All logic lives in `js/engine.js`, separated from the UI and covered by tests — including `tests/quiz-sim.js`, which plays full quizzes as synthetic users with known tastes and scores the recommendations against those true tastes.
 
 ## Add or edit movies
 
@@ -162,7 +172,8 @@ Leave `poster: ""` if nothing resolves — the UI automatically draws an elegant
 ## Run the tests
 
 ```bash
-node tests/engine.test.js     # dataset + engine + quiz-quality harness (33 checks)
+node tests/engine.test.js     # dataset + engine + quiz-quality harness (29 checks)
+node tests/shows.test.js      # TV dataset + Next Series quiz simulation
 node tests/accounts.test.js   # on-device accounts: hashing, isolation, migration (7 checks)
 ```
 
@@ -187,9 +198,13 @@ js/engine.js          Quiz + recommendation logic (no DOM, unit-tested)
 js/accounts.js        On-device accounts: salted-hash credentials + per-account storage
 js/app.js             UI, routing, welcome/sign-in, sharing, localStorage
 manifest.webmanifest  PWA manifest (custom clapperboard + popcorn icon set)
-sw.js                 Service worker (offline shell, cache movie-night-v5)
+sw.js                 Service worker (offline shell, cache movie-night-v7)
 .nojekyll             Tells GitHub Pages to serve the files as-is (no Jekyll build)
 icons/                icon.svg plus Owen's custom PNG icon (1024/512/192/180/32)
+tools/catalog_lib.py     v7 shared helpers (taxonomy, vectors, origin detection)
+tools/rebuild_movies_v7.py  v7 movie audit/rebuild (appeal + evidence scoring)
+tools/rebuild_shows_v7.py   v7 TV rebuild (reads tools/shows_v7_curated.txt)
+tools/shows_v7_curated.txt  Hand-curated American-audience series list
 tools/fetch_posters.py  Verified poster lookup via Wikipedia
 tools/harvest_categories.py  Bulk title harvest from Wikipedia year/genre categories
 tools/enrich_catalog.py  Selection + infobox/summary enrichment for catalog-tier entries
