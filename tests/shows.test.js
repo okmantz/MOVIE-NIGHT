@@ -39,15 +39,19 @@ for (const s of SHOWS) {
     const v = s.vector[a];
     if (typeof v !== 'number' || v < 0 || v > 10) badVector++;
   }
-  if (s.poster && !/^https:\/\/upload\.wikimedia\.org\//.test(s.poster)) badPoster++;
+  /* v10 test alignment: the invariant is "every poster is a verified REAL
+     poster (key art) from a known source" — Wikimedia mostly carries
+     logos/title cards for TV series, so TVmaze and Apple artwork hosts are
+     now allowed sources, while logo files and SVGs count as bad posters. */
+  if (s.poster && (!/^https:\/\/(upload\.wikimedia\.org|static\.tvmaze\.com|([a-z0-9-]+\.)*mzstatic\.com)\//.test(s.poster) || /logo/i.test(s.poster) || /\.svg(\?|$)/i.test(s.poster))) badPoster++;
 }
 check('unique ids', dup === 0, dup + ' duplicates');
 check('schema valid for every show', badSchema === 0, badSchema + ' bad');
 check('all vectors within 0-10 on all axes', badVector === 0, badVector + ' bad');
-check('posters are verified Wikimedia URLs or empty', badPoster === 0, badPoster + ' bad');
+check('posters are verified real-poster URLs or empty', badPoster === 0, badPoster + ' bad');
 
-const withPoster = SHOWS.filter(s => s.poster).length;
-check('poster coverage >= 40% (rest get generated covers)', withPoster / SHOWS.length >= 0.40,
+const withPoster = SHOWS.filter(s => s.poster && !/logo/i.test(s.poster) && !/\.svg(\?|$)/i.test(s.poster)).length;
+check('real-poster coverage >= 95%', withPoster / SHOWS.length >= 0.95,
   (withPoster / SHOWS.length * 100).toFixed(1) + '%');
 
 /* ---------- must-have iconic series ---------- */
