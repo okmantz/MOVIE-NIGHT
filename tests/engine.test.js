@@ -9,18 +9,30 @@ let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('  ok -', name); }
 
 console.log('Dataset');
-check(`has at least 1000 movies (actual: ${MOVIES.length})`, () => {
-  assert.ok(MOVIES.length >= 1000);
+check(`has at least 5000 movies (actual: ${MOVIES.length})`, () => {
+  assert.ok(MOVIES.length >= 5000);
+});
+check('niche genres: Musical, War and Mystery also clear 500; Western is pool-limited', () => {
+  const counts = {};
+  for (const m of MOVIES) for (const g of m.genres) counts[g] = (counts[g] || 0) + 1;
+  for (const g of ['Musical', 'War', 'Mystery']) {
+    assert.ok((counts[g] || 0) >= 500, `genre ${g} has only ${counts[g] || 0}`);
+  }
+  // Western honestly tops out at 243: Wikipedia's 2000-2026 year/genre
+  // categories (this catalog's sourcing window) only contain ~255 real
+  // Western titles, and inventing or mis-genring films to hit 500 was not
+  // an option. Locked at the achieved count so any regression shows.
+  assert.ok((counts['Western'] || 0) >= 243, `genre Western has only ${counts['Western'] || 0}`);
 });
 check('at least 70% of the catalog is from 2000 or later', () => {
   const modern = MOVIES.filter(m => m.year >= 2000).length;
   assert.ok(modern / MOVIES.length >= 0.70, `only ${(100 * modern / MOVIES.length).toFixed(1)}% modern`);
 });
-check('every main genre has at least 100 entries (multi-genre tags counted)', () => {
+check('every main genre has at least 500 entries (multi-genre tags counted)', () => {
   const counts = {};
   for (const m of MOVIES) for (const g of m.genres) counts[g] = (counts[g] || 0) + 1;
-  for (const g of ['Action', 'Sci-Fi', 'Horror', 'Thriller', 'Drama', 'Comedy', 'Romance', 'Crime', 'Animation', 'Fantasy', 'Adventure']) {
-    assert.ok((counts[g] || 0) >= 100, `genre ${g} has only ${counts[g] || 0}`);
+  for (const g of ['Action', 'Sci-Fi', 'Horror', 'Thriller', 'Drama', 'Comedy', 'Romance', 'Crime', 'Animation', 'Fantasy', 'Adventure', 'Family']) {
+    assert.ok((counts[g] || 0) >= 500, `genre ${g} has only ${counts[g] || 0}`);
   }
 });
 check('every movie has all required fields', () => {
