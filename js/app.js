@@ -24,7 +24,7 @@
   }
   function coverHTML(movie, extraClass) {
     var img = movie.poster
-      ? '<img src="' + esc(movie.poster) + '" alt="" loading="lazy" onerror="this.classList.add(\'img-failed\')">'
+      ? '<img src="' + esc(movie.poster) + '" alt="" loading="lazy" decoding="async" onerror="this.classList.add(\'img-failed\')">'
       : '';
     return '<div class="cover ' + (extraClass || '') + '">' + img +
       '<div class="cover-fallback" style="' + paletteFor(movie) + '">' +
@@ -95,16 +95,23 @@
   allGenres.sort();
   var activeGenre = 'All';
   var chipsBox = $('#genre-chips');
+  var genreCounts = {};
+  MOVIES.forEach(function (m) { m.genres.forEach(function (g) { genreCounts[g] = (genreCounts[g] || 0) + 1; }); });
   ['All'].concat(allGenres).forEach(function (g) {
-    var c = el('<button class="chip' + (g === 'All' ? ' active' : '') + '">' + esc(g) + '</button>');
+    var n = g === 'All' ? MOVIES.length : (genreCounts[g] || 0);
+    var c = el('<button class="chip' + (g === 'All' ? ' active' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + ' <span class="chip-count">' + n + '</span></button>');
     c.addEventListener('click', function () {
       activeGenre = g;
-      chipsBox.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('active', x.textContent === g); });
-      renderBrowse();
+      chipsBox.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('active', x.dataset.genre === g); });
+      renderBrowse(true);
     });
     chipsBox.appendChild(c);
   });
-  function renderBrowse() {
+  var PAGE_SIZE = 60;
+  var shownCount = PAGE_SIZE;
+  var lastList = [];
+  function renderBrowse(reset) {
+    if (reset) shownCount = PAGE_SIZE;
     var q = $('#search').value.trim().toLowerCase();
     var sort = $('#sort').value;
     var list = MOVIES.filter(function (m) {
@@ -114,17 +121,41 @@
       return hay.indexOf(q) !== -1;
     });
     list.sort(function (a, b) {
-      if (sort === 'new') return b.year - a.year;
-      if (sort === 'old') return a.year - b.year;
+      if (sort === 'new') return b.year - a.year || a.title.localeCompare(b.title);
+      if (sort === 'old') return a.year - b.year || a.title.localeCompare(b.title);
       if (sort === 'short') return a.runtime - b.runtime;
+      if (sort === 'long') return b.runtime - a.runtime;
       return a.title.localeCompare(b.title);
     });
-    $('#browse-count').textContent = list.length + (list.length === 1 ? ' movie' : ' movies');
-    $('#movie-grid').innerHTML = list.map(cardHTML).join('') ||
+    lastList = list;
+    var shown = list.slice(0, shownCount);
+    $('#browse-count').textContent = list.length + (list.length === 1 ? ' movie' : ' movies') +
+      (list.length > shown.length ? ' · showing ' + shown.length : '');
+    $('#movie-grid').innerHTML = shown.map(cardHTML).join('') ||
       '<p class="muted">Nothing matches — try a different search or genre.</p>';
+    $('#show-more').classList.toggle('hidden', list.length <= shown.length);
   }
-  $('#search').addEventListener('input', renderBrowse);
-  $('#sort').addEventListener('change', renderBrowse);
+  $('#show-more').addEventListener('click', function () { shownCount += PAGE_SIZE; renderBrowse(false); });
+  $('#search').addEventListener('input', function () { renderBrowse(true); });
+  $('#sort').addEventListener('change', function () { renderBrowse(true); });
+
+  /* ---------- tonight's pick (rotates daily, seeded by date) ---------- */
+  (function renderHero() {
+    var cc = $('#catalog-count'); if (cc) cc.textContent = MOVIES.length.toLocaleString() + '+';
+    var pool = MOVIES.filter(function (m) { return m.poster && m.year >= 1960; });
+    if (!pool.length) pool = MOVIES;
+    var seed = Math.floor(Date.now() / 86400000);
+    var pick = pool[seed % pool.length];
+    var box = $('#hero-featured'); if (!box || !pick) return;
+    box.innerHTML =
+      '<button class="hero-card" data-open="' + pick.id + '">' +
+      '<span class="hero-art">' + (pick.poster ? '<img src="' + esc(pick.poster) + '" alt="" onerror="this.classList.add(\'img-failed\')">' : '') +
+      '<span class="hero-fade"></span></span>' +
+      '<span class="hero-info"><span class="hero-title">' + esc(pick.title) + '</span>' +
+      '<span class="hero-meta">' + pick.year + ' · ' + runtimeLabel(pick.runtime) + ' · ' + esc(pick.rating) + ' · ' + pick.genres.map(esc).join(', ') + '</span>' +
+      '<span class="hero-desc">' + esc(pick.description) + '</span>' +
+      '<span class="hero-cta">See why it fits tonight →</span></span></button>';
+  })();
 
   /* ---------- detail sheet ---------- */
   function vectorBars(vector) {
@@ -146,7 +177,7 @@
     var fav = p.favorites.indexOf(id) !== -1, wl = p.watchlist.indexOf(id) !== -1;
     var similar = E.similarMovies(MOVIES, m, 6);
     $('#detail-sheet').innerHTML =
-      '<div class="sheet-hero">' + coverHTML(m) +
+      '<div class="sheet-hero">' + (m.poster ? '<div class="sheet-backdrop" style="background-image:url(&quot;' + esc(m.poster) + '&quot;)"></div>' : '') + coverHTML(m) +
       '<button class="sheet-close" id="detail-close" aria-label="Close">✕</button></div>' +
       '<div class="sheet-body"><h2>' + esc(m.title) + '</h2>' +
       '<p class="meta-line">' + m.year + ' · Directed by ' + esc(m.director) + ' · ' + runtimeLabel(m.runtime) + ' · Rated ' + esc(m.rating) + '</p>' +
@@ -231,7 +262,9 @@
     quiz.used.push(pair[0].id, pair[1].id);
     $('#quiz-progress').style.width = (quiz.round / quiz.rounds * 100) + '%';
     $('#quiz-counter').textContent = 'Round ' + (quiz.round + 1) + ' of ' + quiz.rounds;
-    $('#quiz-pair').innerHTML = pairCard(pair[0], 'a') + pairCard(pair[1], 'b');
+    var qp = $('#quiz-pair');
+    qp.innerHTML = pairCard(pair[0], 'a') + pairCard(pair[1], 'b');
+    qp.classList.remove('pair-enter'); void qp.offsetWidth; qp.classList.add('pair-enter');
   }
   function soloAnswer(kind, side) {
     if (!quiz || !quiz.pair) return;
@@ -246,7 +279,10 @@
     nextSoloRound();
   }
   $('#quiz-pair').addEventListener('click', function (ev) {
-    var c = ev.target.closest('[data-pick]'); if (c) soloAnswer('pick', c.dataset.pick);
+    var c = ev.target.closest('[data-pick]'); if (!c || this.dataset.locked) return;
+    this.dataset.locked = '1'; c.classList.add('picked');
+    var self = this;
+    setTimeout(function () { delete self.dataset.locked; soloAnswer('pick', c.dataset.pick); }, 190);
   });
   $('#quiz-both').addEventListener('click', function () { soloAnswer('both'); });
   $('#quiz-neither').addEventListener('click', function () { soloAnswer('neither'); });
@@ -314,6 +350,8 @@
       $('#couples-counter').textContent = 'Round ' + (couple.round + 1) + ' of ' + couple.rounds;
       $('#couples-turn-label').innerHTML = '<span class="turn-banner">' + turnProfile.emoji + ' ' + esc(turnProfile.name) + '\'s pick</span><br>Which are you more in the mood for?';
       $('#couples-pair').innerHTML = pairCard(pair[0], 'a') + pairCard(pair[1], 'b');
+      var cp = $('#couples-pair');
+      cp.classList.remove('pair-enter'); void cp.offsetWidth; cp.classList.add('pair-enter');
     };
     if (!first) {
       $('#pass-title').textContent = turnProfile.name + ', your turn!';
@@ -338,7 +376,10 @@
     nextCoupleRound(false);
   }
   $('#couples-pair').addEventListener('click', function (ev) {
-    var c = ev.target.closest('[data-pick]'); if (c) coupleAnswer('pick', c.dataset.pick);
+    var c = ev.target.closest('[data-pick]'); if (!c || this.dataset.locked) return;
+    this.dataset.locked = '1'; c.classList.add('picked');
+    var self = this;
+    setTimeout(function () { delete self.dataset.locked; coupleAnswer('pick', c.dataset.pick); }, 190);
   });
   $('#couples-both').addEventListener('click', function () { coupleAnswer('both'); });
   $('#couples-neither').addEventListener('click', function () { coupleAnswer('neither'); });
