@@ -443,13 +443,41 @@
   function closeDetail() { $('#detail-overlay').classList.add('hidden'); }
   $('#detail-overlay').addEventListener('click', function (ev) { if (ev.target === this) closeDetail(); });
 
-  /* ---------- top 20 ---------- */
+  /* ---------- top 20 (movies / shows toggle) ---------- */
   $('#top20-list').innerHTML = TOP20.map(function (t) {
     var m = byId[t.id];
     return '<button class="top-row" data-open="' + m.id + '"><span class="top-rank">' + t.rank + '</span>' + coverHTML(m) +
       '<span><span class="card-title">' + esc(m.title) + '</span><div class="card-sub">' + m.year + ' · ' + esc(m.director) + '</div>' +
       '<div class="top-note">' + esc(t.note) + '</div></span></button>';
   }).join('');
+  var TOP20_BLURBS = {
+    movies: 'Our canon: <em>Inception</em> at #1, Owen\u2019s essentials, and the rest drawn from the highest-rated films ever on Rotten Tomatoes. Ranked, argued over, final.',
+    shows: 'Our series canon: the essential twenty \u2014 prestige dramas, comedy landmarks, and the shows that defined the streaming era. Ranked, argued over, final.'
+  };
+  function renderTopSeries() {
+    var top = (typeof TOP_SERIES !== 'undefined') ? TOP_SERIES : [];
+    $('#top20-series-list').innerHTML = top.map(function (t, i) {
+      var s = showById[t.id]; if (!s) return '';
+      return '<button class="top-row" data-open="' + s.id + '"><span class="top-rank">' + (i + 1) + '</span>' + coverHTML(s) +
+        '<span><span class="card-title">' + esc(s.title) + '</span><div class="card-sub">' + yearText(s) + ' · ' + esc(s.genres.slice(0, 2).join(', ')) + '</div>' +
+        '<div class="top-note">' + esc(t.note) + '</div></span></button>';
+    }).join('');
+  }
+  renderTopSeries();
+  function setTop20Mode(mode) {
+    var shows = mode === 'shows';
+    $('#top20-list').classList.toggle('hidden', shows);
+    $('#top20-series-list').classList.toggle('hidden', !shows);
+    $('#top20-title').textContent = shows ? 'Top 20 Series of All Time' : 'Top 20 of All Time';
+    $('#top20-blurb').innerHTML = shows ? TOP20_BLURBS.shows : TOP20_BLURBS.movies;
+    $('#top20-toggle').querySelectorAll('.seg').forEach(function (b) {
+      b.classList.toggle('selected', b.dataset.top20Mode === mode);
+    });
+  }
+  $('#top20-toggle').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-top20-mode]');
+    if (b) setTop20Mode(b.dataset.top20Mode);
+  });
 
   /* ---------- shuffle ---------- */
   var sg = $('#shuffle-genre');
@@ -901,14 +929,6 @@
     var sgs = $('#show-shuffle-genre');
     sgs.innerHTML = '<option value="">Any genre</option>' + genres.map(function (g) {
       return '<option>' + esc(g) + '</option>';
-    }).join('');
-    /* Top Series */
-    var top = (typeof TOP_SERIES !== 'undefined') ? TOP_SERIES : [];
-    $('#top-series-list').innerHTML = top.map(function (t, i) {
-      var s = showById[t.id]; if (!s) return '';
-      return '<button class="top-row" data-open="' + s.id + '"><span class="top-rank">' + (i + 1) + '</span>' + coverHTML(s) +
-        '<span><span class="card-title">' + esc(s.title) + '</span><div class="card-sub">' + yearText(s) + ' · ' + esc(s.genres.slice(0, 2).join(', ')) + '</div>' +
-        '<div class="top-note">' + esc(t.note) + '</div></span></button>';
     }).join('');
     renderShows(true);
   }
