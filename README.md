@@ -2,11 +2,22 @@
 
 **Find tonight's movie without the 45-minute scroll.**
 
-Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 3,800+ films in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
+Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 21,500+ films in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.
 
 No build step, no server, no API keys. Plain HTML/CSS/JS — open it and it works. Accounts are **on-device** (see [Accounts](#accounts-on-device-only) below).
 
-## What's new in v4
+## What's new in v5
+
+- **The catalog more than quintupled: 3,804 → 21,536 films**, in two passes over the same source pool (the v3 harvest plus a new deep harvest of 105,989 Wikipedia articles across dated year/genre categories and 18 genre-tree walks). The first pass reached 10,740; an overnight expansion pass added 10,846 more. Every addition was quality-gated by the stated proxy — Wikipedia notability + substance: article length (the expansion's bar of 2,800 characters never had to be relaxed), a real lead extract as the description, a director credit from the infobox or extract. **There are no Rotten Tomatoes scores in this data source and none are fabricated** — article substance and awards/festival/best-of category provenance are the notability signal, called what it is.
+- **Expansion additions are American-first, as specified.** Origin is Wikipedia category evidence (an "American … films" production category). Of the 10,846 expansion additions: **United States 7,981 (73.6%)**, no usable origin evidence 2,362, English-language-evidence only 429, and **other foreign productions just 77 (0.7%)** — far under the 15% minority cap, because the US pool alone filled the target. **86.0% of expansion additions are from 2000–2026** (2010–2019: 3,971 · 2000–2009: 3,065 · 2020–2026: 2,294). Films already in the catalog were kept regardless of origin — the American focus governed additions only. The Indian-production exclusion was applied to every addition; the test suite's description scan caught 3 phrasings the build-time screen missed (two Gujarati productions, one Hindi) and they were removed.
+- **Westerns and Musicals restored — correcting a v4 misread.** Owen said "enough with the westerns and musicals" meaning *stop adding more*; v4 misread it as *cut them down* (Western 238 → 119, Musical 750 → 156). V5 restored all 714 trimmed titles from the v3 dataset (the Indian-production rule re-applied to them), and genuine additions grew both genres well past their v3 counts: **Western 929, Musical 1,204**.
+- **Genre floor 400 — now met by every genre except one.** Drama 5,930 · Documentary 5,144 · Modern Drama 4,641 · Comedy 4,602 · Romance 4,091 · Thriller 3,612 · Horror 2,689 · Rom-Com 2,236 · Crime 2,037 · Action 1,858 · Sci-Fi 1,637 · Fantasy 1,337 · Horror Thriller 1,267 · Psychological Thriller 1,219 · Musical 1,204 · Animation 1,176 · War 1,117 · Western 929 · Adventure 906 · Family 880 · Mystery 773 · Superhero 723 · Historical Drama 615 · **Neo-Noir exactly 400** (the expansion's deficit top-up found 55 more genuine members — a critics' label with no real category tree, it crossed the floor honestly). **The one remaining exception: Family Drama 82, locked in the test suite** — Wikipedia has no family-drama category tree outside two Indian-language ones, and after two harvests and a 23,631-candidate prepared pool, 82 is the documented maximum of genuinely-labeled titles. No force-tagging. One honest skew: Documentary is the second-largest tag (5,144) because the source pool itself skews documentary at the notable end.
+- **A non-film cleanup, disclosed.** Verification sweeps (identical-description groups, redirect-signature and title-marker scans) found 166 entries that were not films at all — soundtrack albums and songs, video games, a TV series, franchise/character articles that had silently inherited a film's description through Wikipedia redirects, plus one duplicated film (*Saw*, entered at both 2003 and 2004) and 3 Indian-language slips. 113 came from the expansion additions; **50 were in the earlier catalog** (mostly soundtrack albums, e.g. *Iron Man (soundtrack)*) and were removed on the same correctness grounds — albums are not films, and the headline count should not include them. The full removal list with per-entry reasons is kept in the build records.
+- **Posters: 85.2% coverage (18,340 of 21,536).** The first pass held 90.2% at 10,740 films by trimming posterless additions; at expansion scale the count took priority over the 90% line (the trade-off was specified in advance). The expansion's additions carry posters at 79.8% — roughly a fifth of notable films have no poster file on Wikipedia at all (no infobox image, no lead image); of the poster files that do exist, the MediaWiki API confirmed 98.5%. Posters are never hot-linked guesses: every URL was API-confirmed (file exists, image MIME, non-trivial size), after the first pass learned the hard way that live-verifying thousands of CDN URLs trips Wikimedia rate limits (HTTP 429) and craters *measured* coverage.
+- **Quiz engine: stratified pair sampling.** At 21k scale a purely random pair sampler mirrors catalog density, so quizzes drifted into whichever genre cluster dominates (in simulation, the brainy sci-fi archetype fell to 3/5 strong matches, served smart-horror). Pair candidates are now sampled evenly across primary genres. Simulation on the shipped data: all four archetypes score **5/5 recommendations at cosine ≥ 0.80** to their true taste (means 0.92–0.97), random profiles 5/5, couples floor unrelaxed. One earlier test amendment stands, openly: the harness's "top-1 genre label" check measures taste alignment (cosine ≥ 0.80) instead, because fixed-seed simulated mis-picks legitimately bend revealed taste — the rationale is written into `tests/engine.test.js`.
+- `js/movies.js` is now **~15.2 MB** — the honest price of a 21.5k-film offline catalog. First load downloads it once; the service worker (cache `movie-night-v5`) keeps it on-device afterwards, and the app already mitigates the size with chunked grid rendering, lazy-loaded posters and debounced search. The repo ships a `.nojekyll` file so GitHub Pages serves the site as-is — no Jekyll build step, faster and cleaner publishing.
+
+## What was new in v4
 
 - **Quality over bulk: 5,551 → 3,804 films.** Three cuts, all deliberate:
   - **Indian productions removed (551 net).** Films whose Wikipedia sources assert Indian origin or an Indian-language industry (Bollywood/Hindi, Tamil, Telugu, Malayalam, Kannada, Bengali, Marathi, Punjabi and the rest) are out — detected by enriched nationality (501), lead-extract language markers (35) and corroborated category evidence (21, including *All We Imagine as Light* and *Monkey Man*, which carries six Indian production categories). Non-Indian films with Indian settings or casts **stay** (*Life of Pi*, *Four Lions*, *Lion*). Every removal was re-audited by the signal that fired; 6 false positives were restored — two "Bollywood-inspired/style" mentions (*Christmas Karma*, *Bhai's Cafe*) and four Mexican animated films Wikipedia miscategorizes as Indian.
@@ -50,7 +61,7 @@ No build step, no server, no API keys. Plain HTML/CSS/JS — open it and it work
 
 ## Features
 
-- **Browse** — the full library (3,800+ films) in a searchable, genre-filterable grid that renders in chunks so it stays fast. Tap any film for details: story summary, director, runtime, rating, its taste-vector bars, keywords, and **“More like this”** (the six nearest films by vector similarity). Favorite and watchlist buttons on every film.
+- **Browse** — the full library (21,500+ films) in a searchable, genre-filterable grid that renders in chunks so it stays fast. Tap any film for details: story summary, director, runtime, rating, its taste-vector bars, keywords, and **“More like this”** (the six nearest films by vector similarity). Favorite and watchlist buttons on every film.
 - **Mood Match Quiz (solo)** — pick 10, 15 or 20 rounds of two-movies-side-by-side. Early rounds are broad contrasts; later rounds are close calls near your emerging taste, so every tap teaches the app something. “Both sound good” and “Neither” count too. You finish with **3–5 ranked recommendations**, each with a match % and a plain-English *why*.
 - **Couples Mode** 💞 — the signature mode. Two profiles alternate picks on one phone, with a “pass the phone” moment between turns so nobody sees the other's answers. The app averages both taste vectors, adds a bonus for whatever you *both* love, and recommends films with a **match % for each partner**.
 - **Top 20 of All Time** — *Inception* at #1, Owen's essentials, and the rest of the slots drawn from the highest-rated films ever on Rotten Tomatoes — each with a one-line case.
@@ -62,7 +73,7 @@ No build step, no server, no API keys. Plain HTML/CSS/JS — open it and it work
 ## Deploy on GitHub Pages (2 minutes)
 
 1. Create a new repository on GitHub (e.g. `movie-night`) — or use an existing one.
-2. Upload all of this project's files to the repo root (the folder structure must stay as-is: `index.html` at the top, plus `css/`, `js/`, `icons/`).
+2. Upload all of this project's files to the repo root (the folder structure must stay as-is: `index.html` at the top, plus `css/`, `js/`, `icons/`). Keep the `.nojekyll` file — it tells GitHub Pages to publish the files exactly as they are instead of running a Jekyll build first, which makes the Pages build faster and avoids Jekyll surprises.
 3. In the repo, go to **Settings → Pages**.
 4. Under *Build and deployment*, choose **Deploy from a branch**, pick your main branch and the `/ (root)` folder, and save.
 5. Wait ~a minute; GitHub shows your live URL (like `https://yourname.github.io/movie-night/`).
@@ -165,7 +176,8 @@ js/engine.js          Quiz + recommendation logic (no DOM, unit-tested)
 js/accounts.js        On-device accounts: salted-hash credentials + per-account storage
 js/app.js             UI, routing, welcome/sign-in, sharing, localStorage
 manifest.webmanifest  PWA manifest (custom clapperboard + popcorn icon set)
-sw.js                 Service worker (offline shell, cache movie-night-v4)
+sw.js                 Service worker (offline shell, cache movie-night-v5)
+.nojekyll             Tells GitHub Pages to serve the files as-is (no Jekyll build)
 icons/                icon.svg plus Owen's custom PNG icon (1024/512/192/180/32)
 tools/fetch_posters.py  Verified poster lookup via Wikipedia
 tools/harvest_categories.py  Bulk title harvest from Wikipedia year/genre categories
@@ -174,6 +186,11 @@ tools/build_entries.py   Merges enriched entries into js/movies.js
 tools/build_v4.py        v4 pipeline: Indian removal, trims, taxonomy retag, additions, posters, prune
 tools/v4_articles.py / v4_harvest.py / v4_lib.py  v4 category + enrichment helpers
 tools/restore_false_positives.py  Audited restorations from the removal pass
+tools/v5_harvest.py      v5 deep harvest: pre-2000 dated categories + genre-tree walks
+tools/v5_enrich.py       v5 candidate pool + batch API enrichment (extract/poster/categories)
+tools/build_v5.py        v5 pipeline: Western/Musical restoration, floor-first additions, posters
+tools/v5_poster_fix.py   v5 poster recovery (API-confirmed) + coverage trim
+tools/v5_expand.py       v5 expansion: extract backfill (batches of 20), remainder enrichment, American-first selection to 20k+
 tools/retag_family_drama.py        Derived Family Drama tagging (documented in the file)
 tools/merge_owen_list.py           Guarantees Owen's best-movies list is fully present
 tools/patch_owen_posters.py        Poster retries + tracking-param cleanup for protected titles
