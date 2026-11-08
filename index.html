@@ -153,11 +153,9 @@
   <section id="view-shuffle" class="view">
     <div class="panel">
       <h2>Shuffle Night</h2>
-      <p class="muted">Decision fatigue? We'll deal you five random films. Re-shuffle until one sticks.</p>
-      <div class="search-row">
-        <select id="shuffle-genre" aria-label="Limit shuffle to a genre"></select>
-        <button id="shuffle-go" class="btn btn-primary">Shuffle 5 movies</button>
-      </div>
+      <p class="muted">Choose the kind of night you want. Spin to reveal one title and why it was selected.</p>
+      <div class="shuffle-modes" id="shuffle-modes"><button class="chip active" data-mode="surprise">Surprise Me</button><button class="chip" data-mode="unseen">Something I've Never Seen</button><button class="chip" data-mode="outside">Outside My Comfort Zone</button><button class="chip" data-mode="match">Highest Match</button><button class="chip" data-mode="hidden">Hidden Gem</button><button class="chip" data-mode="horror">Random Horror</button><button class="chip" data-mode="date">Date Night</button><button class="chip" data-mode="short">Under 100 Minutes</button><button class="chip" data-mode="critics">Critically Acclaimed</button><button class="chip" data-mode="throwback">Throwback Night</button></div>
+      <div class="row-gap"><select id="shuffle-genre" aria-label="Limit shuffle to a genre"></select><button id="shuffle-go" class="btn btn-primary">🎲 Spin the roulette</button></div>
     </div>
     <div id="shuffle-results" class="grid"></div>
   </section>
