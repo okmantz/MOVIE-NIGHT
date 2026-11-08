@@ -164,6 +164,15 @@ main{max-width:1060px; margin:0 auto; padding:16px 16px 30px}
 .pass-emoji{font-size:2.6rem}
 .pass-card h2{font-size:1.7rem}
 
+/* Welcome / accounts */
+.welcome-card{background:var(--bg2); border:1px solid var(--line); border-radius:24px; padding:26px 22px; max-width:440px; width:100%; max-height:92vh; overflow-y:auto; text-align:left}
+.welcome-head{text-align:center; margin-bottom:10px}
+.welcome-head h2{font-size:1.7rem; margin:6px 0}
+.auth-chips{padding:2px 0 6px}
+.welcome-share{margin-top:18px; border-top:1px solid var(--line); padding-top:14px; text-align:center}
+.share-row{margin-top:14px}
+.toast{position:fixed; left:50%; bottom:92px; transform:translateX(-50%); background:var(--card2); color:var(--text); border:1px solid var(--line); border-radius:999px; padding:10px 18px; z-index:130; box-shadow:0 8px 30px rgba(0,0,0,.45); font-weight:600; max-width:92vw; text-align:center}
+
 /* Profile */
 .profile-head{display:flex; gap:16px; align-items:center}
 .profile-avatar{width:74px; height:74px; border-radius:50%; font-size:2.1rem; display:flex; align-items:center; justify-content:center; flex:0 0 74px}
