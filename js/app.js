@@ -9,12 +9,14 @@
   function $(sel) { return document.querySelector(sel); }
   function el(html) { var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function runtimeLabel(min) { var h = Math.floor(min / 60), m = min % 60; return h ? (h + 'h ' + m + 'm') : (m + 'm'); }
+  function runtimeLabel(min) { if (!min) return ''; var h = Math.floor(min / 60), m = min % 60; return h ? (h + 'h ' + m + 'm') : (m + 'm'); }
+  function metaLine() { return Array.prototype.filter.call(arguments, function (p) { return !!p; }).join(' · '); }
 
   var PALETTES = {
     Action: ['#7a1f1f', '#2b0d0d'], 'Sci-Fi': ['#14335c', '#060d1d'], Horror: ['#3d0a2e', '#12040e'],
     Thriller: ['#26324a', '#0b0f18'], Drama: ['#5c4318', '#1d1505'], Comedy: ['#7a5410', '#241a04'],
     Romance: ['#6e2438', '#200a12'], Crime: ['#3a3f1a', '#12130a'], Animation: ['#14532d', '#071a10'],
+    Mystery: ['#2e2a4a', '#0d0b1a'], War: ['#4a4232', '#171410'],
     Family: ['#155e63', '#081d1f'], Fantasy: ['#3d2a63', '#120b24'], Adventure: ['#6b3a12', '#1f1004'],
     Western: ['#6e4517', '#211304'], Musical: ['#5b2a5e', '#1c0b1e']
   };
@@ -36,7 +38,7 @@
   function cardHTML(movie) {
     return '<button class="card" data-open="' + movie.id + '">' + coverHTML(movie) +
       '<div class="card-body"><div class="card-title">' + esc(movie.title) + '</div>' +
-      '<div class="card-sub">' + movie.year + ' · ' + runtimeLabel(movie.runtime) + ' · ' + esc(movie.rating) + '</div>' +
+      '<div class="card-sub">' + metaLine(movie.year, runtimeLabel(movie.runtime), movie.rating ? esc(movie.rating) : '') + '</div>' +
       '<div>' + movie.genres.slice(0, 2).map(function (g) { return '<span class="genre-tag">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div class="card-desc">' + esc(movie.description) + '</div></div></button>';
   }
@@ -123,8 +125,8 @@
     list.sort(function (a, b) {
       if (sort === 'new') return b.year - a.year || a.title.localeCompare(b.title);
       if (sort === 'old') return a.year - b.year || a.title.localeCompare(b.title);
-      if (sort === 'short') return a.runtime - b.runtime;
-      if (sort === 'long') return b.runtime - a.runtime;
+      if (sort === 'short') return (a.runtime || 99999) - (b.runtime || 99999);
+      if (sort === 'long') return (b.runtime || 0) - (a.runtime || 0);
       return a.title.localeCompare(b.title);
     });
     lastList = list;
@@ -136,7 +138,8 @@
     $('#show-more').classList.toggle('hidden', list.length <= shown.length);
   }
   $('#show-more').addEventListener('click', function () { shownCount += PAGE_SIZE; renderBrowse(false); });
-  $('#search').addEventListener('input', function () { renderBrowse(true); });
+  var searchTimer = null;
+  $('#search').addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { renderBrowse(true); }, 150); });
   $('#sort').addEventListener('change', function () { renderBrowse(true); });
 
   /* ---------- tonight's pick (rotates daily, seeded by date) ---------- */
@@ -152,7 +155,7 @@
       '<span class="hero-art">' + (pick.poster ? '<img src="' + esc(pick.poster) + '" alt="" onerror="this.classList.add(\'img-failed\')">' : '') +
       '<span class="hero-fade"></span></span>' +
       '<span class="hero-info"><span class="hero-title">' + esc(pick.title) + '</span>' +
-      '<span class="hero-meta">' + pick.year + ' · ' + runtimeLabel(pick.runtime) + ' · ' + esc(pick.rating) + ' · ' + pick.genres.map(esc).join(', ') + '</span>' +
+      '<span class="hero-meta">' + metaLine(pick.year, runtimeLabel(pick.runtime), pick.rating ? esc(pick.rating) : '', pick.genres.map(esc).join(', ')) + '</span>' +
       '<span class="hero-desc">' + esc(pick.description) + '</span>' +
       '<span class="hero-cta">See why it fits tonight →</span></span></button>';
   })();
@@ -180,7 +183,7 @@
       '<div class="sheet-hero">' + (m.poster ? '<div class="sheet-backdrop" style="background-image:url(&quot;' + esc(m.poster) + '&quot;)"></div>' : '') + coverHTML(m) +
       '<button class="sheet-close" id="detail-close" aria-label="Close">✕</button></div>' +
       '<div class="sheet-body"><h2>' + esc(m.title) + '</h2>' +
-      '<p class="meta-line">' + m.year + ' · Directed by ' + esc(m.director) + ' · ' + runtimeLabel(m.runtime) + ' · Rated ' + esc(m.rating) + '</p>' +
+      '<p class="meta-line">' + metaLine(m.year, (m.director && m.director !== 'Unknown') ? 'Directed by ' + esc(m.director) : '', runtimeLabel(m.runtime), m.rating ? 'Rated ' + esc(m.rating) : '') + '</p>' +
       '<div>' + m.genres.map(function (g) { return '<span class="genre-tag">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<p>' + esc(m.description) + '</p>' +
       '<div class="row-gap">' +
@@ -221,7 +224,7 @@
   function pairCard(movie, side) {
     return '<button class="card" data-pick="' + side + '">' + coverHTML(movie) +
       '<div class="card-body"><div class="card-title">' + esc(movie.title) + '</div>' +
-      '<div class="card-sub">' + movie.year + ' · ' + esc(movie.genres[0]) + ' · ' + runtimeLabel(movie.runtime) + '</div>' +
+      '<div class="card-sub">' + metaLine(movie.year, esc(movie.genres[0]), runtimeLabel(movie.runtime)) + '</div>' +
       '<div class="card-desc">' + esc(movie.description) + '</div></div></button>';
   }
   function resultCard(r, extra) {
