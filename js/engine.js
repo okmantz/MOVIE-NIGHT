@@ -206,7 +206,32 @@
       var famous = pool.filter(function (m) { return recognizability(m) >= 1; });
       if (famous.length >= 12) pool = famous;
     }
-    var candidates = sample(pool, Math.min(18, pool.length), rng);
+    /* Stratified candidate sampling: bucket the pool by primary genre
+       and draw round-robin, so the 18 candidates span the taste space
+       instead of mirroring catalog density (at 20k+ titles a pure
+       random draw floods the sample with whichever genres dominate
+       the catalog, and the quiz would only ever ask about those). */
+    var candidates = [];
+    (function () {
+      var target = Math.min(18, pool.length);
+      var buckets = {}, keys = [], i, g, b;
+      for (i = 0; i < pool.length; i++) {
+        g = pool[i].genres[0] || 'Other';
+        if (!buckets[g]) { buckets[g] = []; keys.push(g); }
+        buckets[g].push(pool[i]);
+      }
+      // shuffle bucket order and each bucket with the quiz rng
+      for (i = keys.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)); var t = keys[i]; keys[i] = keys[j]; keys[j] = t; }
+      keys.forEach(function (k) { var arr = buckets[k]; for (var x = arr.length - 1; x > 0; x--) { var y = Math.floor(rng() * (x + 1)); var z = arr[x]; arr[x] = arr[y]; arr[y] = z; } });
+      var progressed = true;
+      while (candidates.length < target && progressed) {
+        progressed = false;
+        for (i = 0; i < keys.length && candidates.length < target; i++) {
+          b = buckets[keys[i]];
+          if (b.length) { candidates.push(b.pop()); progressed = true; }
+        }
+      }
+    })();
     var best = null, bestScore = -Infinity, i, j, a, b;
     for (i = 0; i < candidates.length; i++) for (j = i + 1; j < candidates.length; j++) {
       a = candidates[i]; b = candidates[j];
