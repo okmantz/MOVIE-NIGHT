@@ -58,9 +58,8 @@
     return 'background:linear-gradient(160deg,' + p[0] + ',' + p[1] + ')';
   }
   function coverHTML(movie, extraClass) {
-    var img = movie.poster
-      ? '<img src="' + esc(movie.poster) + '" alt="" loading="lazy" decoding="async" onerror="this.classList.add(\'img-failed\')">'
-      : '';
+    var usablePoster = movie.poster && !/\.svg(?:\?|$)/i.test(movie.poster);
+    var img = usablePoster ? '<img src="' + esc(movie.poster) + '" alt="" loading="lazy" decoding="async" onerror="this.classList.add(\'img-failed\')">' : '';
     return '<div class="cover ' + (extraClass || '') + '">' + img +
       '<div class="cover-fallback" style="' + paletteFor(movie) + '">' +
       '<div class="cover-initial">' + esc(movie.title.replace(/^(The|A|An) /, '').charAt(0)) + '</div>' +
@@ -96,7 +95,7 @@
       email: rec.email || null, unclaimed: !!rec.unclaimed, guest: !!rec.guest,
       favorites: d.favorites || [], watchlist: d.watchlist || [],
       showFavorites: d.showFavorites || [], showWatchlist: d.showWatchlist || [],
-      history: d.history || [], taste: taste
+      history: d.history || [], taste: taste, ratings: d.ratings || {}, watched: d.watched || [], events: d.events || [], quizProfile: d.quizProfile || null, achievements: d.achievements || []
     };
   }
   var state = { profiles: [], activeId: null, coupleA: null, coupleB: null };
@@ -122,7 +121,7 @@
       A.saveData(p.id, {
         favorites: p.favorites, watchlist: p.watchlist,
         showFavorites: p.showFavorites, showWatchlist: p.showWatchlist,
-        history: p.history, taste: p.taste
+        history: p.history, taste: p.taste, ratings: p.ratings, watched: p.watched, events: p.events, quizProfile: p.quizProfile, achievements: p.achievements
       });
     });
     try { localStorage.setItem(UI_KEY, JSON.stringify({ coupleA: state.coupleA, coupleB: state.coupleB })); } catch (e) { /* ignore */ }
@@ -213,6 +212,7 @@
     goto(state.activeId ? 'home' : 'profile');
     var p = profile(id);
     toast(p && p.guest ? 'Browsing as Guest 👤' : 'Welcome, ' + (p ? p.name : '') + ' 🍿');
+    maybeStartPersonalityQuiz();
   }
   function signOutToWelcome() {
     A.setSession(null);
@@ -408,6 +408,7 @@
     var favList = tv ? p.showFavorites : p.favorites;
     var wlList = tv ? p.showWatchlist : p.watchlist;
     var fav = favList.indexOf(id) !== -1, wl = wlList.indexOf(id) !== -1;
+    var rating = p.ratings[id] || 0, watched = p.watched.indexOf(id) !== -1;
     var similar = E.similarMovies(tv ? SHOW_LIST : MOVIES, m, 6);
     var meta = tv
       ? metaLine(yearText(m), m.status || '',
@@ -428,6 +429,7 @@
       '<div class="row-gap">' +
       '<button class="btn ' + (fav ? 'btn-primary' : '') + '" id="detail-fav">' + (fav ? '♥ Favorited' : '♡ Favorite') + '</button>' +
       '<button class="btn ' + (wl ? 'btn-primary' : '') + '" id="detail-wl">' + (wl ? '✓ On watchlist' : '+ Watchlist') + '</button></div>' +
+      '<div class="rating-row"><span>Rate this title</span><button class="rate-btn ' + (rating===1?'selected up':'') + '" data-rate="1">👍</button><button class="rate-btn ' + (rating===-1?'selected down':'') + '" data-rate="-1">👎</button><button class="btn btn-ghost" id="detail-watched">' + (watched?'✓ Already watched':'＋ Already watched') + '</button></div>' +
       (tv ? '<p class="fineprint">Platform shown is the original network or service that first aired the series — where it streams today changes often and isn\'t tracked here.</p>' : '') +
       '<h3>Taste profile</h3>' + vectorBars(m.vector) +
       '<div class="kw-row">' + m.keywords.map(function (k) { return '<span class="kw">#' + esc(k) + '</span>'; }).join('') + '</div>' +
@@ -438,6 +440,8 @@
     $('#detail-close').addEventListener('click', closeDetail);
     $('#detail-fav').addEventListener('click', function () { toggleList('favorites', id); openDetail(id); renderHeaderProfile(); });
     $('#detail-wl').addEventListener('click', function () { toggleList('watchlist', id); openDetail(id); });
+    $('#detail-watched').addEventListener('click', function () { setWatched(id,!watched); openDetail(id); });
+    $('#detail-sheet').querySelectorAll('[data-rate]').forEach(function(b){b.addEventListener('click',function(){rateTitle(id,Number(b.dataset.rate));openDetail(id);});});
     $('#detail-sheet').scrollTop = 0;
   }
   function closeDetail() { $('#detail-overlay').classList.add('hidden'); }
@@ -482,11 +486,10 @@
   /* ---------- shuffle ---------- */
   var sg = $('#shuffle-genre');
   sg.innerHTML = ['All'].concat(allGenres).map(function (g) { return '<option>' + esc(g) + '</option>'; }).join('');
-  function doShuffle() {
-    var picks = E.shufflePick(MOVIES, { genre: sg.value, count: 5, rng: Math.random });
-    $('#shuffle-results').innerHTML = picks.map(cardHTML).join('');
-  }
-  $('#shuffle-go').addEventListener('click', doShuffle);
+  var shuffleMode='surprise';
+  $('#shuffle-modes').addEventListener('click',function(ev){var b=ev.target.closest('[data-mode]');if(!b)return;shuffleMode=b.dataset.mode;$('#shuffle-modes').querySelectorAll('.chip').forEach(function(x){x.classList.toggle('active',x===b);});});
+  function doShuffle(){var me=profile(),watched=me?me.watched:[],rated=me?me.ratings:{};var pool=MOVIES.filter(function(m){if(sg.value&&sg.value!=='All'&&m.genres.indexOf(sg.value)<0)return false;if(shuffleMode==='unseen'&&(watched.indexOf(m.id)>=0||rated[m.id]))return false;if(shuffleMode==='horror'&&m.genres.indexOf('Horror')<0)return false;if(shuffleMode==='short'&&(!m.runtime||m.runtime>=100))return false;if(shuffleMode==='date'&&!m.genres.some(function(g){return ['Romance','Rom-Com','Comedy'].indexOf(g)>=0;}))return false;if(shuffleMode==='critics'&&(m.ap||0)<88)return false;if(shuffleMode==='throwback'&&m.year>2005)return false;if(shuffleMode==='hidden'&&(m.ap||0)>78)return false;return true;});if(!pool.length){toast('No titles fit those filters.');return;}if(me&&(shuffleMode==='match'||shuffleMode==='outside')){E.calibrate(MOVIES);pool.sort(function(a,b){return shuffleMode==='match'?E.matchPercent(me.taste,b)-E.matchPercent(me.taste,a):E.matchPercent(me.taste,a)-E.matchPercent(me.taste,b);});}var pick=pool[Math.floor(Math.random()*Math.min(pool.length,shuffleMode==='match'||shuffleMode==='outside'?Math.min(150,pool.length):pool.length))];var why={surprise:'A wildcard from across the catalog.',unseen:'You have not watched or rated this title yet.',outside:'A deliberate step outside your usual taste.',match:'A strong match for your current taste profile.',hidden:'A less obvious pick worth discovering.',horror:'A horror pick for a darker kind of night.',date:'A date-night mix of romance and laughs.',short:'A movie under 100 minutes.',critics:'A highly regarded title.',throwback:'A trip back to an earlier era.'}[shuffleMode];if(me&&(shuffleMode==='match'||shuffleMode==='outside'))why+=' '+E.whyFor(me.taste,pick);$('#shuffle-results').innerHTML='<div class="roulette-reveal"><p class="eyebrow">YOUR ROULETTE REVEAL</p>'+cardHTML(pick)+'<p class="detail-why">'+esc(why)+'</p><button class="btn" id="roulette-again">Spin again</button></div>';$('#roulette-again').addEventListener('click',doShuffle);}
+  $('#shuffle-go').addEventListener('click',doShuffle);
 
   /* ---------- shared quiz rendering ---------- */
   function pairCard(movie, side) {
@@ -600,6 +603,8 @@
     } else {
       quiz.picks.push({ chosenId: a.id, passedId: b.id, kind: kind });
     }
+    if (kind === 'neither') { logEvent(a.id, 'skipped'); logEvent(b.id, 'skipped'); }
+    else if (kind === 'pick') logEvent((side === 'a' ? b : a).id, 'passed');
     quiz.round++;
     nextSoloRound();
   }
@@ -615,8 +620,11 @@
     $('#quiz-play').classList.add('hidden');
     var tv = quiz.pool === 'shows';
     var anchors = E.anchorsFromPicks(quiz.picks.map(function (p) { return { chosen: quiz.map[p.chosenId], passed: quiz.map[p.passedId], kind: p.kind }; }));
-    var recs = E.buildRecommendations(quiz.fullList, quiz.pref, { excludeIds: quiz.used, limit: 5, filter: quiz.filter, anchors: anchors });
     var p = profile();
+    var ignored = Object.keys(p.ratings || {}).filter(function(id){return p.ratings[id] === -1;});
+    var skipped = {}; (p.events || []).filter(function(e){return e.type === 'skipped' || e.type === 'passed';}).forEach(function(e){skipped[e.id]=(skipped[e.id]||0)+1;});
+    var repeatedlyIgnored = Object.keys(skipped).filter(function(id){return skipped[id] >= 2;});
+    var recs = E.buildRecommendations(quiz.fullList, quiz.pref, { excludeIds: quiz.used.concat(p.watched || [], ignored, repeatedlyIgnored), limit: 5, filter: quiz.filter, anchors: anchors });
     recordQuiz(p, tv ? 'series' : 'solo', quiz.rounds, quiz.pref, recs.map(function (r) { return r.movie.title; }));
     var box = $('#quiz-results');
     box.innerHTML = '<div class="panel"><h2>' + (tv ? 'Your next series' : 'Tonight, you\'re watching') + '</h2>' +
@@ -846,9 +854,11 @@
       '<div class="stat-row"><div class="stat"><b>' + p.favorites.length + '</b><span>Favorites</span></div>' +
       '<div class="stat"><b>' + p.watchlist.length + '</b><span>Watchlist</span></div>' +
       '<div class="stat"><b>' + p.history.length + '</b><span>Quizzes</span></div></div>' +
-      '<h3 style="margin-top:18px">Taste profile</h3>' + tasteBars(p) + '</div>';
+      '<h3 style="margin-top:18px">Your entertainment identity</h3>' + identityHTML(p) + '<h3>Taste profile</h3>' + tasteBars(p) + '<button class="btn" id="redo-personality">Retake personality quiz</button></div>'; 
     $('#profile-lists').innerHTML =
+      '<div class="panel"><h3>🏆 Achievements</h3>' + achievementsHTML(p) + '</div>' +
       '<div class="panel"><h3>♥ Favorites</h3>' + miniGrid(p.favorites) + '</div>' +
+      '<div class="panel"><h3>Recently watched</h3>' + miniGrid(p.watched.slice(-12).reverse()) + '</div>' +
       '<div class="panel"><h3>Watchlist</h3>' + miniGrid(p.watchlist) + '</div>' +
       '<div class="panel"><h3>📺 Series favorites</h3>' + miniGrid(p.showFavorites, showById, 'Nothing here yet — open the TV Shows section and favorite a series.') + '</div>' +
       '<div class="panel"><h3>📺 Series watchlist</h3>' + miniGrid(p.showWatchlist, showById, 'Nothing here yet — add a series from the TV Shows section.') + '</div>' +
@@ -856,6 +866,7 @@
         return '<p class="muted" style="margin:6px 0">' + (h.mode === 'couples' ? '💞 Couples' : h.mode === 'series' ? '📺 Series' : '🎯 Solo') + ' · ' + h.rounds + ' rounds · ' + new Date(h.date).toLocaleDateString() +
           (h.top && h.top.length ? '<br>Top pick: <strong style="color:var(--text)">' + esc(h.top[0]) + '</strong>' : '') + '</p>';
       }).join('') + '</div>' : '');
+    var redo=$('#redo-personality'); if(redo) redo.addEventListener('click',function(){openPersonalityQuiz(true);});
   }
 
   /* ---------- TV shows section ---------- */
@@ -952,6 +963,19 @@
     goto('quiz');
   });
 
+  /* ---------- Personal taste memory and discovery ---------- */
+  function logEvent(id,type,value){var p=profile();if(!p)return;p.events=p.events||[];p.events.push({id:id,type:type,value:value||null,at:new Date().toISOString()});if(p.events.length>1500)p.events=p.events.slice(-1500);save();}
+  function setWatched(id,yes){var p=profile();if(!p)return;var i=p.watched.indexOf(id);if(yes&&i<0){p.watched.push(id);var watchedTitle=anyById(id);if(watchedTitle)E.addMovie(p.taste,watchedTitle,0.25);logEvent(id,'watched');toast('Added to watched history');}else if(!yes&&i>=0){p.watched.splice(i,1);var unwatchedTitle=anyById(id);if(unwatchedTitle)E.addMovie(p.taste,unwatchedTitle,-0.25);logEvent(id,'unwatched');}checkAchievements(p);save();}
+  function rateTitle(id,score){var p=profile();if(!p)return;p.ratings=p.ratings||{};if(p.ratings[id]===score)delete p.ratings[id];else p.ratings[id]=score;logEvent(id,score===1?'liked':'disliked',score);var m=anyById(id);if(m)E.addMovie(p.taste,m,score===1?.65:-.55);save();checkAchievements(p);toast(score===1?'Taste updated: liked':'Taste updated: disliked');}
+  function identityHTML(p){var watched=p.watched.map(anyById).filter(Boolean),norm=E.normalizePreference(p.taste),top=E.AXES.map(function(a){return {a:a,v:norm[a]||0};}).sort(function(a,b){return b.v-a.v;}).slice(0,5);var names={brainy:'The Psychological Strategist',dark:'The Dark Storyteller',adrenaline:'The Adrenaline Seeker',epic:'The World Builder',weird:'The Mystery Hunter',heartwarming:'The Emotional Explorer',scary:'The Midnight Seeker',funny:'The Comedy Curator',romantic:'The Romantic Idealist',cozy:'The Comfort Connoisseur'};var gc={},dc={},dec={};watched.forEach(function(m){m.genres.forEach(function(g){gc[g]=(gc[g]||0)+1;});var d=m.director||m.creator;if(d)dc[d]=(dc[d]||0)+1;var y=m.year||m.startYear;if(y)dec[Math.floor(y/10)*10+'s']=(dec[Math.floor(y/10)*10+'s']||0)+1;});function topKeys(o){return Object.keys(o).sort(function(a,b){return o[b]-o[a];}).slice(0,3).join(', ')||'Not enough data yet';}var ratings=Object.keys(p.ratings||{}).map(function(k){return p.ratings[k];}),avg=ratings.length?ratings.reduce(function(a,b){return a+b;},0)/ratings.length:null;return '<div class="identity-card"><div class="identity-title">'+(names[top[0].a]||'The Curious Cinephile')+'</div><p class="muted">Your entertainment identity · evolves as you watch and rate</p>'+top.map(function(x){return '<div class="identity-meter"><span>'+x.a+'</span><b>'+Math.round(x.v*10)+'%</b><i><em style="width:'+Math.round(x.v*10)+'%"></em></i></div>';}).join('')+'<div class="identity-stats"><div><b>'+watched.length+'</b><span>Watched</span></div><div><b>'+ratings.length+'</b><span>Rated</span></div><div><b>'+(avg===null?'—':(avg>0?'+':'')+avg.toFixed(1))+'</b><span>Avg. rating</span></div></div><p><b>Most watched genres:</b> '+topKeys(gc)+'</p><p><b>Favorite directors / creators:</b> '+topKeys(dc)+'</p><p><b>Favorite decades:</b> '+topKeys(dec)+'</p><p class="muted">Comparisons with other users need shared aggregate data; this version stores activity on this device and does not upload it.</p></div>';}
+  var ACHIEVEMENTS=[['cinephile','Cinephile','Rate 100 titles',function(p){return Object.keys(p.ratings||{}).length>=100;}],['horror','Horror Addict','Watch 25 horror movies',function(p){return p.watched.filter(function(id){var m=anyById(id);return m&&m.genres.indexOf('Horror')>=0;}).length>=25;}],['nolan','Nolan Architect','Watch 5 Nolan films',function(p){return p.watched.filter(function(id){var m=anyById(id);return m&&m.director&&m.director.indexOf('Nolan')>=0;}).length>=5;}],['binge','Binge Master','Watch 5 TV series',function(p){return p.watched.filter(function(id){return !!showById[id];}).length>=5;}],['explorer','Genre Explorer','Watch 10 genres',function(p){var g={};p.watched.forEach(function(id){var m=anyById(id);if(m)m.genres.forEach(function(x){g[x]=1;});});return Object.keys(g).length>=10;}],['historian','Movie Historian','Watch movies across 6 decades',function(p){var d={};p.watched.forEach(function(id){var m=anyById(id);if(m&&m.year)d[Math.floor(m.year/10)]=1;});return Object.keys(d).length>=6;}],['double','Double Feature','Watch two movies in one day',function(p){var d={};(p.events||[]).filter(function(e){return e.type==='watched';}).forEach(function(e){var m=anyById(e.id);if(m&&!isShow(m))d[e.at.slice(0,10)]=(d[e.at.slice(0,10)]||0)+1;});return Object.keys(d).some(function(k){return d[k]>=2;});}]];
+  function checkAchievements(p){p.achievements=p.achievements||[];ACHIEVEMENTS.forEach(function(a){if(p.achievements.indexOf(a[0])<0&&a[3](p)){p.achievements.push(a[0]);toast('Achievement unlocked: '+a[1]);}});save();}
+  function achievementsHTML(p){checkAchievements(p);return '<div class="achievement-grid">'+ACHIEVEMENTS.map(function(a){var done=p.achievements.indexOf(a[0])>=0;return '<div class="achievement '+(done?'earned':'')+'"><b>'+(done?'🏆':'🔒')+' '+a[1]+'</b><small>'+a[2]+'</small></div>';}).join('')+'</div>' ;}
+  function openPersonalityQuiz(){var p=profile();if(!p)return;var a=p.quizProfile||{platforms:[],genres:[],mood:''},step=0;var qs=[{title:'Where do you stream?',key:'platforms',multi:true,opts:['Netflix','Prime Video','Max','Disney+','Hulu','Apple TV+','Peacock','Paramount+','Theaters / physical media']},{title:'Which genres pull you in?',key:'genres',multi:true,opts:['Psychological Thriller','Mystery','Sci-Fi','Horror','Crime','Action','Drama','Comedy','Romance','Fantasy','Documentary','Animation']},{title:'What makes a story unforgettable?',key:'mood',multi:false,opts:['Mind-bending twists','Complex characters','Atmosphere and tension','Big emotional payoff','Fast-paced action','Immersive worlds','Clever humor','Real-life stories']}];var ov=el('<div class="overlay center"><div class="welcome-card personality-modal"></div></div>');document.body.appendChild(ov);var box=ov.querySelector('.welcome-card');function draw(){var q=qs[step];box.innerHTML='<p class="eyebrow">YOUR ENTERTAINMENT DNA · STEP '+(step+1)+' OF 3</p><h2>'+q.title+'</h2><div class="quiz-choice-grid">'+q.opts.map(function(v){var on=q.multi?a[q.key].indexOf(v)>=0:a[q.key]===v;return '<button class="quiz-choice '+(on?'selected':'')+'" data-v="'+esc(v)+'">'+esc(v)+'</button>';}).join('')+'</div><div class="row-gap"><button class="btn" id="qback" '+(!step?'disabled':'')+'>Back</button><button class="btn btn-primary" id="qnext">'+(step===2?'Save personality':'Continue')+'</button></div><button class="btn btn-ghost" id="qclose">Maybe later</button>';box.querySelectorAll('[data-v]').forEach(function(b){b.onclick=function(){var v=b.dataset.v;if(q.multi){var i=a[q.key].indexOf(v);if(i<0)a[q.key].push(v);else a[q.key].splice(i,1);}else a[q.key]=v;draw();};});box.querySelector('#qback').onclick=function(){if(step){step--;draw();}};box.querySelector('#qclose').onclick=function(){ov.remove();};box.querySelector('#qnext').onclick=function(){if(step<2){step++;draw();return;}p.quizProfile=a;var axis={'Mind-bending twists':'brainy','Complex characters':'heartwarming','Atmosphere and tension':'dark','Big emotional payoff':'heartwarming','Fast-paced action':'adrenaline','Immersive worlds':'epic','Clever humor':'funny','Real-life stories':'brainy'}[a.mood];if(axis)p.taste[axis]+=3;logEvent('personality-quiz','quiz-completed');save();ov.remove();renderProfile();toast('Entertainment identity updated');};}draw();}
+  function maybeStartPersonalityQuiz(){var p=profile();if(p&&!p.quizProfile)setTimeout(openPersonalityQuiz,900);}
+  /* Replace missing posters and logo-only SVG artwork with page thumbnails where Wikipedia has a real image. */
+  function recoverPosters(){var queue=MOVIES.concat(SHOW_LIST).filter(function(m){return !m.poster||/\.svg(?:\?|$)/i.test(m.poster);}),next=0;function worker(){if(next>=queue.length)return;var m=queue[next++],u='https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=pageimages&piprop=thumbnail&pithumbsize=600&titles='+encodeURIComponent(m.title);fetch(u).then(function(x){return x.json();}).then(function(d){var pages=d.query&&d.query.pages||{},pg=pages[Object.keys(pages)[0]];if(pg&&pg.thumbnail){m.poster=pg.thumbnail.source;document.querySelectorAll('[data-open="'+m.id+'"]').forEach(function(card){var cover=card.querySelector('.cover');if(cover){var img=cover.querySelector('img');if(img)img.src=m.poster;else cover.insertAdjacentHTML('afterbegin','<img src="'+esc(m.poster)+'" alt="" loading="lazy">');}});}}).catch(function(){}).finally(worker);}for(var i=0;i<4;i++)worker();}
+
   /* ---------- init ---------- */
   renderHeaderProfile();
   renderBrowse();
@@ -959,4 +983,6 @@
   renderCouplesSetup();
   renderSharePanel();
   if (!state.activeId) openWelcome('main');
+  recoverPosters();
+  if (state.activeId) maybeStartPersonalityQuiz();
 })();
