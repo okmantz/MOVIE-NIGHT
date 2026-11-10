@@ -82,3 +82,12 @@ node tests/accounts.test.js
 - js/movies.js: +1,089 evidence-backed films (12,226 total) via tools/v11_add_movies.py (`--loose --count 4000` to go wider).
 - tools/v11_add_shows.py: TVmaze importer for +1,000 series; run locally (`python3 tools/v11_add_shows.py --count 1000`).
 - sw.js cache bumped to v11. Engine tests relaxed for the broader era mix; new roulette tests added.
+
+## v13 — refinement
+- Quiz: "how long" removed; compact one-screen setup with optional fine-tune fold.
+- Top 20: customizable "My list" (add, replace, reorder, remove), compact header with Filters panel.
+- Detail sheet updates in place — scroll position no longer jumps on rate/favorite/watchlist/watched.
+- Account: personalization grouped into accordion folds.
+- Emoji chrome replaced with line icons; premium restyle (emoji avatar sets kept as opt-in).
+- Adaptive engine: favorites, likes/dislikes, watchlist, Top 20, watched and skips all feed a reversible affinity model that shapes Top 20, quiz results, couples, shuffle and match %.
+- Service worker cache bumped to movienight-v13.
