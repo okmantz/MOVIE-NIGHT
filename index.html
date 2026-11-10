@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0f">
-<meta name="description" content="Movie Night — answer a few this-or-that questions and get the perfect movie. Solo, shuffle, Top 20 and a couples mode that finds a film you'll both love.">
+<meta name="theme-color" content="#09090e" id="meta-theme">
+<meta name="color-scheme" content="dark light">
+<meta name="description" content="Movie Night — tell it your mood, answer a few this-or-that questions, and get the movie or show that fits tonight. Solo or as a couple.">
 <title>Movie Night — Find tonight's movie</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -12,270 +13,149 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+/* Apply the saved theme before first paint so there is no colour flash. */
+(function () {
+  try {
+    var t = JSON.parse(localStorage.getItem('movienight.theme.v1') || 'null');
+    if (!t || !t.vars) return;
+    var r = document.documentElement;
+    for (var k in t.vars) r.style.setProperty(k, t.vars[k]);
+    r.setAttribute('data-mode', t.mode === 'light' ? 'light' : 'dark');
+    var m = document.getElementById('meta-theme'); if (m && t.vars['--bg']) m.setAttribute('content', t.vars['--bg']);
+  } catch (e) { /* ignore */ }
+})();
+</script>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+<a class="skip" href="#app">Skip to content</a>
+
 <header class="app-header">
-  <div class="brand"><svg class="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="4" fill="currentColor"/><path d="M10 9l5 3-5 3z" fill="#1a1405"/></svg><span>Movie Night</span></div>
+  <button id="menu-btn" class="icon-btn" aria-label="Open your watchlists" aria-expanded="false" aria-controls="drawer">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+    <span id="menu-count" class="badge-dot hidden">0</span>
+  </button>
+  <button class="brand" data-goto="home" aria-label="Movie Night home">
+    <svg class="brand-mark" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="4" fill="currentColor"/><path d="M10 9l5 3-5 3z" fill="var(--accent-ink)"/></svg>
+    <span>Movie Night</span>
+  </button>
   <nav class="topnav" aria-label="Primary">
-    <button data-goto="home" class="tab active">Home</button><button data-goto="quiz" class="tab">Quiz</button><button data-goto="top20" class="tab">Top 20</button><button data-goto="shuffle" class="tab">Shuffle</button><button data-goto="more" class="tab">More</button>
+    <button data-goto="home" class="tab active">Home</button><button data-goto="quiz" class="tab">Quiz</button><button data-goto="top20" class="tab">Top 20</button><button data-goto="shuffle" class="tab">Shuffle</button><button data-goto="account" class="tab">Account</button>
   </nav>
-  <button id="header-profile" class="header-profile" aria-label="Open your profile"></button>
+  <span class="header-spacer"></span>
+  <button id="header-profile" class="header-profile" aria-label="Open your account"></button>
 </header>
 
+<!-- WATCHLIST DRAWER (hamburger) -->
+<div id="drawer-scrim" class="scrim"></div>
+<aside id="drawer" class="drawer" aria-label="Your watchlists" aria-hidden="true">
+  <div class="drawer-head">
+    <div><div class="eyebrow">Your lists</div><h2>Watchlists</h2></div>
+    <button id="drawer-close" class="icon-btn" aria-label="Close watchlists"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div id="drawer-body" class="drawer-body"></div>
+</aside>
+
 <main id="app">
-  <!-- BROWSE -->
+  <!-- HOME -->
   <section id="view-home" class="view active">
-    <div class="hero">
-      <p class="hero-eyebrow">Tonight's pick</p>
-      <div id="hero-featured" class="hero-featured"></div>
-      <button class="btn btn-primary btn-big" data-goto="quiz">Find my movie — take the quiz</button>
-      <p class="hero-sub">Browse <span id="catalog-count">12,000+</span> films people actually watch or let the quiz read your mood in two minutes.</p>
+    <div id="hero-featured"></div>
+    <div class="seg-group" id="media-switch" role="tablist" aria-label="Movies or TV shows" style="margin:22px 0 4px">
+      <button data-media="movies" class="seg selected" role="tab">Movies</button>
+      <button data-media="shows" class="seg" role="tab">TV Shows</button>
     </div>
-    <div class="segmented media-switch" id="media-switch" role="tablist" aria-label="Movies or TV shows">
-      <button data-media="movies" class="seg selected">Movies</button>
-      <button data-media="shows" class="seg">TV Shows</button>
+    <div class="browse-bar">
+      <label class="search">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="search" type="search" placeholder="Search titles, directors, cast, vibes…" autocomplete="off" aria-label="Search">
+      </label>
+      <select id="sort" aria-label="Sort"></select>
     </div>
-    <div id="movies-browse">
-    <div class="browse-controls">
-      <div class="search-row">
-        <input id="search" type="search" placeholder="Search titles, directors, vibes…" aria-label="Search movies">
-        <select id="sort" aria-label="Sort movies">
-          <option value="pop">Top picks</option>
-          <option value="title">A – Z</option>
-          <option value="new">Newest first</option>
-          <option value="old">Oldest first</option>
-          <option value="short">Shortest first</option>
-          <option value="long">Longest first</option>
-        </select>
-      </div>
-      <div id="genre-chips" class="chips" role="tablist" aria-label="Filter by genre"></div>
-    </div>
+    <div id="genre-chips" class="chips" role="group" aria-label="Filter by genre"></div>
     <p id="browse-count" class="count-line"></p>
-    <div id="movie-grid" class="grid"></div>
-    <button id="show-more" class="btn btn-big hidden">Show more movies</button>
-    </div><!-- /movies-browse -->
-    <div id="shows-browse" class="hidden">
-      <div class="panel shows-hero">
-        <h2>Find your next TV show</h2>
-        <p><span id="shows-count">1,500+</span> series — network hits, streaming originals, HBO prestige and comfort rewatches. Take the Next Series quiz or shuffle a handful.</p>
-        <div class="row">
-          <button class="btn primary" id="start-show-quiz">Next Series Quiz</button>
-        </div>
-        <div class="row shuffle-row">
-          <select id="show-shuffle-genre" aria-label="Shuffle genre"><option value="">Any genre</option></select>
-          <button class="btn" id="show-shuffle-btn">Shuffle 5 series</button>
-        </div>
-        <div id="show-shuffle-results" class="list-grid"></div>
-      </div>
-      <div class="browse-controls">
-        <input id="show-search" type="search" placeholder="Search series, genres, creators…" autocomplete="off">
-        <select id="show-sort" aria-label="Sort shows">
-          <option value="pop">Top picks</option>
-          <option value="title">A – Z</option>
-          <option value="new">Newest first</option>
-          <option value="seasons">Most seasons</option>
-          <option value="episodes">Most episodes</option>
-        </select>
-      </div>
-      <div id="show-genre-chips" class="chips"></div>
-      <p id="show-browse-count" class="count-line"></p>
-      <div id="show-grid" class="grid"></div>
-      <button id="show-more-shows" class="btn btn-big hidden">Show more series</button>
-    </div>
+    <div id="grid" class="grid"></div>
+    <button id="show-more" class="btn btn-block btn-lg hidden" style="margin-top:18px">Show more</button>
   </section>
 
-  <!-- QUIZ -->
+  <!-- QUIZ (solo + couples, movies + TV) -->
   <section id="view-quiz" class="view">
-    <div id="quiz-setup" class="panel">
-      <h2 id="quiz-setup-title">Mood Match Quiz</h2>
-      <p class="muted" id="quiz-setup-copy">Two movies, one tap. Pick the one you're more in the mood for — there are no wrong answers. After the last round we'll line up 3–5 films matched to your taste.</p>
-      <p class="label">What are we picking?</p>
-      <div class="segmented" id="quiz-pool" role="tablist" aria-label="Quiz pool">
-        <button data-pool="movies" class="seg selected">Movies</button>
-        <button data-pool="shows" class="seg">TV Shows</button>
-      </div>
-      <p class="label">Who's watching?</p>
-      <div class="segmented seg-sm" id="ctx-audience" data-ctx="audience">
-        <button data-val="" class="seg selected">Just me</button>
-        <button data-val="date" class="seg">Date night</button>
-        <button data-val="family" class="seg">Family</button>
-      </div>
-      <p class="label">How much time?</p>
-      <div class="segmented seg-sm" id="ctx-length" data-ctx="length">
-        <button data-val="" class="seg selected">Any length</button>
-        <button data-val="short" class="seg">Under ~105 min</button>
-        <button data-val="epic" class="seg">Settle in (2h+)</button>
-      </div>
-      <p class="label">Which era?</p>
-      <div class="segmented seg-sm" id="ctx-era" data-ctx="era">
-        <button data-val="" class="seg selected">Anything</button>
-        <button data-val="modern" class="seg">2000s on</button>
-        <button data-val="recent" class="seg">Recent (2015+)</button>
-      </div>
-      <p class="label">How many rounds?</p>
-      <div class="segmented" id="quiz-rounds">
-        <button data-rounds="10" class="seg">10<span>quick</span></button>
-        <button data-rounds="15" class="seg selected">15<span>classic</span></button>
-        <button data-rounds="20" class="seg">20<span>deep cut</span></button>
-      </div>
-      <button id="quiz-start" class="btn btn-primary btn-big">Start quiz</button>
-    </div>
+    <div id="quiz-setup" class="panel"></div>
     <div id="quiz-play" class="hidden">
       <div class="progress-wrap"><div id="quiz-progress" class="progress"></div></div>
       <p id="quiz-counter" class="counter"></p>
-      <h2 class="quiz-q">Which are you more in the mood for?</h2>
+      <div id="quiz-inplay" class="inplay hidden"></div>
+      <h2 id="quiz-q" class="quiz-q">Which are you more in the mood for?</h2>
       <div id="quiz-pair" class="pair"></div>
       <div class="pair-alt">
+        <button id="quiz-undo" class="btn btn-ghost" title="Go back one question">↶ Back</button>
         <button id="quiz-both" class="btn btn-ghost">Both sound good</button>
-        <button id="quiz-neither" class="btn btn-ghost">Neither, skip</button>
+        <button id="quiz-neither" class="btn btn-ghost">Neither</button>
       </div>
     </div>
     <div id="quiz-results" class="hidden"></div>
   </section>
 
   <!-- TOP 20 -->
-  <section id="view-top20" class="view">
-    <div class="panel slim">
-      <h2 id="top20-title">Top 20 of All Time</h2>
-      <p class="muted" id="top20-blurb">Our canon: <em>Inception</em> at #1, Owen's essentials, and the rest drawn from the highest-rated films ever on Rotten Tomatoes. Ranked, argued over, final.</p>
-      <div class="segmented" id="top20-toggle" style="margin-top:12px">
-        <button class="seg selected" data-top20-mode="movies">Movies</button>
-        <button class="seg" data-top20-mode="shows">TV Shows</button>
-      </div>
-    </div>
-    <div id="top20-list"></div>
-    <div id="top20-series-list" class="hidden"></div>
-  </section>
+  <section id="view-top20" class="view"><div id="top20-root"></div></section>
 
   <!-- SHUFFLE -->
   <section id="view-shuffle" class="view">
+    <div class="page-head"><span class="eyebrow">Roulette</span><h1>Shuffle Night</h1><p>Pick the kind of night you want, spin, and get five ranked picks with a match score for each.</p></div>
     <div class="panel">
-      <h2>Shuffle Night</h2>
-      <p class="muted">Choose the kind of night you want, hit spin, and watch the roulette fly — then get your top five picks, ranked, with a match score for each.</p>
-      <div class="shuffle-modes" id="shuffle-modes"><button class="chip active" data-mode="surprise">Surprise Me</button><button class="chip" data-mode="unseen">Something I've Never Seen</button><button class="chip" data-mode="outside">Outside My Comfort Zone</button><button class="chip" data-mode="match">Highest Match</button><button class="chip" data-mode="hidden">Hidden Gem</button><button class="chip" data-mode="horror">Random Horror</button><button class="chip" data-mode="date">Date Night</button><button class="chip" data-mode="short">Under 100 Minutes</button><button class="chip" data-mode="critics">Critically Acclaimed</button><button class="chip" data-mode="throwback">Throwback Night</button></div>
-      <div class="row-gap"><select id="shuffle-genre" aria-label="Limit shuffle to a genre"></select><button id="shuffle-go" class="btn btn-primary">🎲 Spin the roulette</button></div>
-    </div>
-    <div id="shuffle-results" class="grid"></div>
-  </section>
-
-  <!-- MORE -->
-  <section id="view-more" class="view">
-    <h2>More ways to play</h2>
-    <button class="big-link" data-media-link="shows">
-      <span class="big-link-emoji"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
-      <span><strong>TV Shows</strong><small>1,500+ series, the Next Series quiz, Top Series list</small></span><span class="chev">›</span>
-    </button>
-    <button class="big-link" data-goto="couples">
-      <span class="big-link-emoji"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/></svg></span>
-      <span><strong>Couples Mode</strong><small>Pass the phone back and forth — we'll find a film you'll both love.</small></span>
-      <span class="chev">›</span>
-    </button>
-    <button class="big-link" data-open-personality>
-      <span class="big-link-emoji">🧬</span>
-      <span><strong>Personality Quiz</strong><small>Three questions — platforms, genres, what makes a story unforgettable — that set your entertainment identity. Retake any time.</small></span><span class="chev">›</span>
-    </button>
-    <button class="big-link" data-goto="profile">
-      <span class="big-link-emoji"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
-      <span><strong>Profile, Identity &amp; Achievements</strong><small>Your account, evolving entertainment identity, achievements, seasonal challenges, favorites, watchlist and quiz history.</small></span>
-      <span class="chev">›</span>
-    </button>
-    <div id="share-panel"></div>
-    <div class="panel about">
-      <h3>How Movie Night picks</h3>
-      <p class="muted">Every film in the library carries a “taste vector” — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. Your quiz picks teach the app what's distinctive about your taste, then it looks for well-known films that fit — and keeps the list varied. Couples mode only suggests films that clear a minimum fit for <em>both</em> of you, then favors the fairest match.</p>
-      <p class="muted">Add it to your home screen: in your browser menu choose <em>Add to Home Screen</em> / <em>Install app</em>.</p>
-    </div>
-  </section>
-
-  <!-- COUPLES -->
-  <section id="view-couples" class="view">
-    <div id="couples-setup" class="panel">
-      <h2>Couples Mode</h2>
-      <p class="muted">One phone, two tastes. You'll take turns — one pick each round — and we'll find the films sitting right where your tastes overlap.</p>
-      <label class="label" for="couple-a">Partner one</label>
-      <select id="couple-a" class="select"></select>
-      <label class="label" for="couple-b">Partner two</label>
-      <select id="couple-b" class="select"></select>
-      <p class="label">How many rounds? <span class="muted">(split evenly between you)</span></p>
-      <div class="segmented" id="couple-rounds">
-        <button data-rounds="12" class="seg">12<span>6 each</span></button>
-        <button data-rounds="16" class="seg selected">16<span>8 each</span></button>
-        <button data-rounds="20" class="seg">20<span>10 each</span></button>
+      <div class="seg-group" id="shuffle-media" style="margin-bottom:6px">
+        <button data-smedia="movies" class="seg selected">Movies</button><button data-smedia="shows" class="seg">TV Shows</button>
       </div>
-      <button id="couples-start" class="btn btn-primary btn-big">Start couples quiz</button>
-      <p id="couples-error" class="error hidden">Pick two different people — create a second account from the Profile page, or pair up with Guest.</p>
-    </div>
-    <div id="couples-play" class="hidden">
-      <div class="progress-wrap"><div id="couples-progress" class="progress"></div></div>
-      <p id="couples-counter" class="counter"></p>
-      <h2 class="quiz-q" id="couples-turn-label"></h2>
-      <div id="couples-pair" class="pair"></div>
-      <div class="pair-alt">
-        <button id="couples-both" class="btn btn-ghost">Both sound good</button>
-        <button id="couples-neither" class="btn btn-ghost">Neither, skip</button>
+      <div class="shuffle-modes" id="shuffle-modes"></div>
+      <div class="row">
+        <select id="shuffle-genre" aria-label="Limit shuffle to a genre" style="width:auto;min-width:160px"></select>
+        <button id="shuffle-go" class="btn btn-primary btn-lg" style="flex:1;min-width:180px">🎲 Spin the roulette</button>
       </div>
     </div>
-    <div id="couples-results" class="hidden"></div>
+    <div id="shuffle-results"></div>
   </section>
 
-  <!-- PROFILE -->
-  <section id="view-profile" class="view">
-    <div id="profile-switcher" class="chips"></div>
-    <div id="profile-card"></div>
-    <div class="panel">
-      <h3 id="profile-form-title">Add a profile</h3>
-      <label class="label" for="pf-name">Name</label>
-      <input id="pf-name" class="input" type="text" maxlength="24" placeholder="e.g. Alex">
-      <p class="label">Avatar</p>
-      <div id="pf-emojis" class="emoji-row"></div>
-      <p class="label">Color</p>
-      <div id="pf-colors" class="color-row"></div>
-      <div class="row-gap">
-        <button id="pf-save" class="btn btn-primary">Save profile</button>
-        <button id="pf-new" class="btn btn-ghost">+ Add account</button>
-      </div>
-    </div>
-    <div id="profile-lists"></div>
-  </section>
+  <!-- ACCOUNT -->
+  <section id="view-account" class="view"><div id="account-root"></div></section>
 </main>
 
-<!-- DETAIL SHEET -->
-<div id="detail-overlay" class="overlay hidden" role="dialog" aria-modal="true">
+<!-- TITLE DETAIL SHEET -->
+<div id="detail-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Title details">
   <div class="sheet" id="detail-sheet"></div>
 </div>
 
-<!-- PASS THE PHONE -->
-<div id="pass-overlay" class="overlay center hidden">
+<!-- COUPLES: PASS THE PHONE -->
+<div id="pass-overlay" class="overlay center hidden" role="dialog" aria-modal="true">
   <div class="pass-card">
     <div class="pass-emoji">📱💞</div>
     <p class="muted">Pass the phone…</p>
     <h2 id="pass-title"></h2>
     <p class="muted">Your turn to pick. No peeking at their answers.</p>
-    <button id="pass-go" class="btn btn-primary btn-big"></button>
+    <button id="pass-go" class="btn btn-primary btn-lg btn-block"></button>
   </div>
 </div>
 
-<!-- WELCOME / ACCOUNTS (card content is built by js/app.js) -->
+<!-- WELCOME / SIGN-IN (content built by js/app.js) -->
 <div id="welcome-overlay" class="overlay center hidden" role="dialog" aria-modal="true">
   <div class="welcome-card" id="welcome-card"></div>
 </div>
 
-<div id="toast" class="toast hidden" role="status"></div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <nav class="tabbar" aria-label="Main">
   <button data-goto="home" class="tab active"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
   <button data-goto="quiz" class="tab"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></svg><span>Quiz</span></button>
   <button data-goto="top20" class="tab"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M9 21h6M12 14v7"/></svg><span>Top 20</span></button>
-  <button data-goto="shuffle" class="tab"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3c4 0 5 10 9 10h6M3 17h3c1.5 0 2.5-1.200 3.500-2.800M15 7h6M18 4l3 3-3 3M18 14l3 3-3 3"/></svg><span>Shuffle</span></button>
-  <button data-goto="more" class="tab"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="19" cy="12" r="1.3" fill="currentColor"/></svg><span>More</span></button>
+  <button data-goto="shuffle" class="tab"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3c4 0 5 10 9 10h6M3 17h3c1.5 0 2.5-1.2 3.5-2.8M15 7h6M18 4l3 3-3 3M18 14l3 3-3 3"/></svg><span>Shuffle</span></button>
+  <button data-goto="account" class="tab"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span>Account</span></button>
 </nav>
 
 <script src="js/movies.js"></script>
 <script src="js/shows.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/accounts.js"></script>
+<script src="js/ratings.js"></script>
 <script src="js/app.js"></script>
 <script>
 if ('serviceWorker' in navigator) {

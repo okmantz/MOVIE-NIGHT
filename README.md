@@ -1,5 +1,7 @@
 # 🎬 Movie Night
 
+> **v12:** premium redesign, mood-first adaptive quiz with Couples mode, personal Top 20, hamburger watchlists, Account page with themes/avatars, and a TMDB importer for +8,000 movies / +3,500 shows. See [UPGRADE-NOTES.md](UPGRADE-NOTES.md).
+
 **Find tonight's movie without the 45-minute scroll.**
 
 Movie Night is a mobile-first web app (an installable PWA) built around one idea borrowed from movie vector maps: *every film has a position in taste-space*. Each of the 11,000+ films (and 1,200+ series) in the library carries a **taste vector** — scores for thrills, scares, laughs, heart, darkness, romance, scale, coziness, smarts and weirdness. A quick this-or-that quiz builds *your* vector, and the app recommends the films whose vectors point the same way.

@@ -1,6 +1,6 @@
 /* Movie Night service worker — caches the app shell so the app opens offline.
    Poster images are cached opportunistically at runtime. */
-var CACHE = 'movie-night-v11';
+var CACHE = 'movienight-v12';
 var SHELL = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ var SHELL = [
   './js/shows.js',
   './js/engine.js',
   './js/accounts.js',
+  './js/ratings.js',
   './js/app.js',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -20,7 +21,11 @@ var SHELL = [
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
-    caches.open(CACHE).then(function (cache) { return cache.addAll(SHELL); }).then(function () { return self.skipWaiting(); })
+    caches.open(CACHE).then(function (cache) {
+      /* The big optional data files are cached best-effort so one failure can't block install. */
+      var EXT = ['./js/movies-meta.js', './js/shows-meta.js', './js/movies-ext.js', './js/shows-ext.js'];
+      return cache.addAll(SHELL).then(function () { return Promise.all(EXT.map(function (u) { return cache.add(u).catch(function () {}); })); });
+    }).then(function () { return self.skipWaiting(); })
   );
 });
 
