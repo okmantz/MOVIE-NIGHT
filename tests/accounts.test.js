@@ -112,3 +112,18 @@ async function check(name, fn) { await fn(); passed++; console.log('  ok -', nam
 
   console.log(`\nALL ${passed} ACCOUNT CHECKS PASSED`);
 })().catch(e => { console.error('FAILED:', e); process.exit(1); });
+
+/* ---- v12: settings, Top 20 prefs, avatar fields ---- */
+(function v12() {
+  const A2 = require('../js/accounts.js');
+  const d = A2.emptyData();
+  if (!d.settings || d.top20.mode !== 'foryou') throw new Error('emptyData missing v12 fields');
+  A2.saveData('t-v12', { settings: { theme: 'noir' }, top20: { mode: 'canon', genres: ['Horror'], era: 'recent', hideWatched: true, hidden: ['x'] } });
+  const g = A2.getData('t-v12');
+  if (g.settings.theme !== 'noir' || g.top20.mode !== 'canon' || g.top20.genres[0] !== 'Horror' || !g.top20.hideWatched || g.top20.hidden[0] !== 'x') throw new Error('v12 data did not round-trip');
+  const old = A2.getData('never-saved');
+  if (old.top20.mode !== 'foryou' || Object.keys(old.settings).length) throw new Error('defaults wrong for fresh account');
+  const rec = A2.updatePerson(A2.GUEST_ID, { name: 'Guest', style: 'monogram', bg: 'sunset', frame: 'glow' });
+  if (rec.style !== 'monogram' || rec.bg !== 'sunset' || rec.frame !== 'glow') throw new Error('avatar fields not saved');
+  console.log('  ok - v12 settings, top20 prefs and avatar fields round-trip');
+})();
