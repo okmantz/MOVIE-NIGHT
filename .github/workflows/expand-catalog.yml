@@ -1,0 +1,47 @@
+# Expands the catalog with TMDB (+8,000 movies, +3,500 shows) and adds ratings,
+# IMDb ids, streaming providers and any missing covers. Run it from the Actions tab.
+#
+# One-time setup: add a repository secret named TMDB_API_KEY
+#   (free key: https://www.themoviedb.org/settings/api -> "API Key (v3 auth)").
+name: Expand catalog (TMDB)
+on:
+  workflow_dispatch:
+    inputs:
+      movies:
+        description: "New movies to add (extension size)"
+        default: "8000"
+      shows:
+        description: "New TV shows to add (extension size)"
+        default: "3500"
+      meta:
+        description: "Also fetch ratings / IMDb ids / streaming / cover backfill for the whole catalog"
+        type: boolean
+        default: true
+permissions:
+  contents: write
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Run importer
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          if [ -z "$TMDB_API_KEY" ]; then echo "Add the TMDB_API_KEY repository secret first."; exit 1; fi
+          ARGS="--movies ${{ inputs.movies }} --shows ${{ inputs.shows }}"
+          if [ "${{ inputs.meta }}" = "true" ]; then ARGS="$ARGS --meta"; fi
+          python3 tools/v12_tmdb_import.py $ARGS
+      - name: Bump service-worker cache so phones pick up the new data
+        run: |
+          STAMP=$(date +%Y%m%d%H%M)
+          sed -i -E "s/(movienight-v12)[-0-9a-z]*/\1-$STAMP/" sw.js
+      - name: Commit results
+        run: |
+          git config user.name "movie-night-bot"; git config user.email "actions@users.noreply.github.com"
+          git add js/movies-ext.js js/shows-ext.js js/movies-meta.js js/shows-meta.js sw.js
+          git commit -m "Expand catalog from TMDB" || echo "nothing to commit"
+          git push
