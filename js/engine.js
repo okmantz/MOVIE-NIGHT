@@ -200,8 +200,10 @@
       var like = likedZ.length ? topMean(likedZ.map(function (z) { return cosineArrays(z, zm); }), 3) : taste;
       var dis = dislikedZ.length ? topMean(dislikedZ.map(function (z) { return cosineArrays(z, zm); }), 2) : 0;
       var fit = 0.72 * taste + 0.28 * like - 0.22 * Math.max(0, dis - Math.max(0, like) * 0.6);
+      var af = options.affinity ? affinityScore(options.affinity, m) : 0;
+      fit += 0.30 * af;
       var rt = typeof m.r === 'number' ? Math.max(-0.04, Math.min(0.05, (m.r - 6.5) * 0.02)) : 0;
-      return { movie: m, score: taste, fit: fit, rank: fit + pop * (0.02 + appeal(m) * 0.10) + rt, z: zm };
+      return { movie: m, score: taste, fit: fit, aff: af, rank: fit + pop * (0.02 + appeal(m) * 0.10) + rt, z: zm };
     });
   }
 
@@ -252,7 +254,8 @@
     var ranked = scoreAll(pool, pref, options).sort(function (a, b) { return b.rank - a.rank; });
     var out = mmrSelect(ranked, limit, options.diversity == null ? 0.22 : options.diversity);
     return out.map(function (r) {
-      return { movie: r.movie, score: r.score, fit: r.fit, why: whyFor(pref, r.movie), match: matchPercent(pref, r.movie) };
+      var ar = options.affinity && r.aff > 0.1 ? affinityReason(options.affinity, r.movie) : '';
+      return { movie: r.movie, score: r.score, fit: r.fit, aff: r.aff, why: whyFor(pref, r.movie) + (ar ? ' ' + ar : ''), match: blendMatch(matchPercent(pref, r.movie), r.aff) };
     });
   }
 
@@ -530,7 +533,9 @@
       var zm = zMovie(m);
       var a = cosineZ(zA, zm), b = cosineZ(zB, zm), c = cosineZ(zC, zm);
       var fair = 0.5 * (a + b) / 2 + 0.5 * Math.min(a, b);
-      return { movie: m, cosA: a, cosB: b, cosC: c, z: zm, rank: fair * 0.7 + c * 0.3 + 0.02 + appeal(m) * 0.16 };
+      var xa = options.affinityA ? affinityScore(options.affinityA, m) : 0, xb = options.affinityB ? affinityScore(options.affinityB, m) : 0;
+      var fairAff = 0.5 * (xa + xb) / 2 + 0.5 * Math.min(xa, xb);
+      return { movie: m, cosA: a, cosB: b, cosC: c, z: zm, xa: xa, xb: xb, rank: fair * 0.7 + c * 0.3 + 0.02 + appeal(m) * 0.16 + 0.22 * fairAff };
     });
     var chosen = [], floorUsed = 0, s, f;
     for (s = 0; s < COUPLES_FLOOR_STEPS.length; s++) {
@@ -543,7 +548,7 @@
     return out.map(function (r) {
       return {
         movie: r.movie, score: r.cosC, cosA: r.cosA, cosB: r.cosB, floor: floorUsed,
-        matchA: matchPercent(prefA, r.movie), matchB: matchPercent(prefB, r.movie),
+        matchA: blendMatch(matchPercent(prefA, r.movie), r.xa), matchB: blendMatch(matchPercent(prefB, r.movie), r.xb),
         combined: combined, why: whyFor(combined, r.movie)
       };
     });
@@ -789,9 +794,11 @@
     if (strict.length >= limit * 4) pool = strict;
     else { var loose = pool.filter(function (m) { return quality(m) >= 0.6; }); if (loose.length >= limit * 2) pool = loose; }
     if (!pool.length) return [];
-    var likedZ = [], id;
-    for (id in rated) if (rated[id] === 1 && o.byId && o.byId[id]) likedZ.push(zMovie(o.byId[id]));
+    var likedZ = [], id, aff = o.affinity || null;
+    if (!aff) for (id in rated) if (rated[id] === 1 && o.byId && o.byId[id]) likedZ.push(zMovie(o.byId[id]));
     var zt = hasTaste ? zPref(taste) : null;
+    /* Declared genres seed a brand-new profile; real behaviour takes over as signals accumulate. */
+    var declaredW = declared.length ? 0.14 / (1 + (aff ? aff.n : 0) / 10) : 0;
     var scored = pool.map(function (m) {
       var zm = zMovie(m);
       var match = zt ? (50 + 50 * Math.tanh(1.25 * cosineArrays(zt, zm))) / 100 : 0.5;
@@ -800,11 +807,12 @@
         if (declared.indexOf(m.genres[0]) !== -1) g = 1;
         else if (m.genres.some(function (x) { return declared.indexOf(x) !== -1; })) g = 0.6;
       }
-      var anchor = likedZ.length ? Math.max(0, topMean(likedZ.map(function (z) { return cosineArrays(z, zm); }), 3)) : 0;
+      var af = aff ? affinityScore(aff, m, { direct: true }) : 0;
+      var anchor = (!aff && likedZ.length) ? Math.max(0, topMean(likedZ.map(function (z) { return cosineArrays(z, zm); }), 3)) : 0;
       var q = quality(m);
-      var s = (zt ? 0.46 : 0.2) * match + 0.24 * q + (declared.length ? 0.14 : 0) * g + (likedZ.length ? 0.16 : 0) * anchor +
+      var s = (zt ? 0.46 : 0.2) * match + 0.24 * q + declaredW * g + (likedZ.length ? 0.16 : 0) * anchor + 0.30 * af +
         (watched[m.id] && rated[m.id] === 1 ? 0.04 : 0);
-      return { movie: m, s: s, match: Math.round(match * 100), z: zm };
+      return { movie: m, s: s, match: Math.round(Math.max(0.01, Math.min(0.99, match + 0.14 * af)) * 100), aff: af, z: zm };
     }).sort(function (a, b) { return b.s - a.s; });
     var cand = scored.slice(0, Math.max(120, limit * 10)), out = [], gc = {};
     while (out.length < limit && cand.length) {
@@ -822,7 +830,8 @@
       gc[pk] = (gc[pk] || 0) + 1;
     }
     return out.map(function (r) {
-      return { movie: r.movie, match: r.match, score: r.s, why: hasTaste ? whyFor(taste, r.movie) : 'A consensus favourite.' };
+      var ar = aff && r.aff > 0.08 ? affinityReason(aff, r.movie) : '';
+      return { movie: r.movie, match: r.match, score: r.s, aff: r.aff, why: ar || (hasTaste ? whyFor(taste, r.movie) : 'A consensus favourite.') };
     });
   }
 
@@ -845,10 +854,117 @@
     var best = null, bestK = -1;
     pool.forEach(function (m) {
       var w = Math.pow(Math.max(0.05, quality(m)), 2) * (hasTaste ? (0.6 + matchPercent(taste, m) / 100) : 1);
+      if (o.affinity) w *= 1 + 0.7 * Math.max(-0.8, affinityScore(o.affinity, m));
       var k = Math.pow(Math.max(1e-9, rng()), 1 / Math.max(1e-6, w));
       if (k > bestK) { bestK = k; best = m; }
     });
     return best;
+  }
+
+
+  /* =====================================================================
+     v13 — adaptive affinity model
+     ---------------------------------------------------------------------
+     The taste vector only knows ten abstract axes. The affinity model
+     remembers CONTENT: which genres, themes (keywords), people and
+     specific films a person keeps responding to, and which they push away.
+     Every action is a weighted signal (a favorite is worth more than a
+     watchlist add; a thumbs-down outweighs a watch). Scores are shrunk
+     toward zero with a prior, so one tap nudges the list and a pattern
+     steers it. The result is a number in [-1, 1] that every ranking in
+     the app blends in, so recommendations sharpen with each action.
+     ===================================================================== */
+  var SIGNAL_W = { fav: 1.0, like: 0.8, top20: 0.7, watchlist: 0.45, picked: 0.3, watched: 0.25, passed: -0.12, skipped: -0.2, dislike: -0.95 };
+
+  function signalEntries(s) {
+    s = s || {};
+    var acc = {}, W = SIGNAL_W, seen = {};
+    function add(id, w) { if (id) acc[id] = (acc[id] || 0) + w; }
+    (s.favorites || []).concat(s.showFavorites || []).forEach(function (id) { add(id, W.fav); });
+    (s.watchlist || []).concat(s.showWatchlist || []).forEach(function (id) { add(id, W.watchlist); });
+    (s.watched || []).forEach(function (id) { add(id, W.watched); });
+    var mine = s.mine || {};
+    (mine.movies || []).concat(mine.shows || []).forEach(function (id) { add(id, W.top20); });
+    Object.keys(s.ratings || {}).forEach(function (id) {
+      var r = s.ratings[id];
+      if (r === 1) add(id, W.like); else if (r === -1) add(id, W.dislike);
+    });
+    (s.events || []).forEach(function (e) {
+      if (!e || !e.id || (e.type !== 'passed' && e.type !== 'skipped' && e.type !== 'picked')) return;
+      var k = e.type + ':' + e.id;
+      seen[k] = (seen[k] || 0) + 1;
+      if (seen[k] <= 3) add(e.id, W[e.type]);
+    });
+    return Object.keys(acc).map(function (id) { return { id: id, w: Math.max(-1.6, Math.min(2.2, acc[id])) }; })
+      .filter(function (e) { return Math.abs(e.w) >= 0.05; });
+  }
+
+  function shrink(sum, mass, k) { return mass ? sum / (mass + k) : 0; }
+
+  function buildAffinity(entries, lookup) {
+    var get = typeof lookup === 'function' ? lookup : function (id) { return lookup && lookup[id]; };
+    var gS = {}, gM = {}, kS = {}, kM = {}, pS = {}, pM = {}, anchors = [], own = {};
+    (entries || []).forEach(function (e) {
+      var m = get(e.id); if (!m || !m.vector) return;
+      var a = Math.abs(e.w);
+      anchors.push({ m: m, w: e.w }); own[e.id] = e.w;
+      (m.genres || []).forEach(function (g, i) { var f = i === 0 ? 1 : 0.6; gS[g] = (gS[g] || 0) + e.w * f; gM[g] = (gM[g] || 0) + a * f; });
+      (m.keywords || []).forEach(function (k) { kS[k] = (kS[k] || 0) + e.w; kM[k] = (kM[k] || 0) + a; });
+      var who = m.director || m.creator;
+      if (who && who !== 'Unknown') { pS[who] = (pS[who] || 0) + e.w; pM[who] = (pM[who] || 0) + a; }
+    });
+    anchors.sort(function (x, y) { return Math.abs(y.w) - Math.abs(x.w); });
+    if (anchors.length > 80) anchors = anchors.slice(0, 80);
+    var model = { anchors: anchors, own: own, n: anchors.length, genres: {}, keywords: {}, people: {}, conf: Math.min(1, anchors.length / 6) };
+    Object.keys(gS).forEach(function (g) { model.genres[g] = shrink(gS[g], gM[g], 1.5); });
+    Object.keys(kS).forEach(function (k) { model.keywords[k] = shrink(kS[k], kM[k], 2.5); });
+    Object.keys(pS).forEach(function (x) { model.people[x] = shrink(pS[x], pM[x], 1.5); });
+    return model;
+  }
+
+  /* Affinity of one title for one person, in [-1, 1]. */
+  function affinityScore(model, m, opts) {
+    if (!model || !model.n || !m || !m.vector) return 0;
+    var zm = zMovie(m), pos = [], neg = [], i, a, sim;
+    for (i = 0; i < model.anchors.length; i++) {
+      a = model.anchors[i];
+      if (a.m.id === m.id) continue;
+      sim = cosineArrays(zMovie(a.m), zm);
+      if (a.w > 0) pos.push(sim * Math.min(1, a.w)); else neg.push(sim * Math.min(1, -a.w));
+    }
+    var posSim = topMean(pos, 3), negSim = topMean(neg, 2);
+    var anchor = posSim - 0.7 * Math.max(0, negSim);
+    var gs = 0, gw = 0;
+    (m.genres || []).forEach(function (g, k) { var f = k === 0 ? 1 : 0.6; if (model.genres[g] != null) { gs += model.genres[g] * f; gw += f; } });
+    var genre = gw ? gs / gw : 0;
+    var vals = (m.keywords || []).map(function (k) { return model.keywords[k] || 0; }).filter(function (v) { return v !== 0; }).sort(function (x, y) { return y - x; });
+    var kw = 0;
+    if (vals.length) {
+      var top = topMean(vals.slice(), 3), bot = vals.slice(-2).reduce(function (t, v) { return t + v; }, 0) / Math.min(2, vals.length);
+      kw = 0.8 * Math.max(0, top) + 0.8 * Math.min(0, bot);
+    }
+    var who = m.director || m.creator, person = who && model.people[who] != null ? model.people[who] : 0;
+    var score = (0.5 * anchor + 0.25 * genre + 0.17 * kw + 0.08 * person) * model.conf;
+    if (opts && opts.direct && model.own[m.id] != null) score += 0.18 * Math.max(-1.5, Math.min(1.5, model.own[m.id]));
+    return Math.max(-1, Math.min(1, score));
+  }
+
+  /* Taste-vector match % nudged by learned affinity (± ~14 points). */
+  function blendMatch(basePct, aff) {
+    return Math.max(1, Math.min(99, Math.round(basePct + 14 * (aff || 0))));
+  }
+
+  /* Plain-language reasons a title fits what the person has been doing. */
+  function affinityReason(model, m) {
+    if (!model || !model.n) return '';
+    var gs = (m.genres || []).filter(function (g) { return (model.genres[g] || 0) >= 0.25; })
+      .sort(function (a, b) { return model.genres[b] - model.genres[a]; });
+    var ks = (m.keywords || []).filter(function (k) { return (model.keywords[k] || 0) >= 0.18; })
+      .sort(function (a, b) { return model.keywords[b] - model.keywords[a]; });
+    if (ks.length && gs.length) return 'You keep coming back to ' + gs[0].toLowerCase() + ' with “' + ks[0] + '” in it.';
+    if (ks.length) return 'Shares the “' + ks[0] + '” thread with titles you rated highly.';
+    if (gs.length) return 'You respond well to ' + gs[0].toLowerCase() + '.';
+    return '';
   }
 
   function recalibrate() { calibratedFor = null; }
@@ -869,7 +985,8 @@
     distanceConcentration: distanceConcentration, dominantAxis: dominantAxis,
     COUPLES_FLOOR: COUPLES_FLOOR, COUPLES_FLOOR_STEPS: COUPLES_FLOOR_STEPS,
     REJECT_WEIGHT: REJECT_WEIGHT, calibrate: calibrate, contextFilter: contextFilterV12,
-    anchorsFromPicks: anchorsFromPicks, appeal: appeal, zPref: zPref, zMovie: zMovie
+    anchorsFromPicks: anchorsFromPicks, appeal: appeal,
+    SIGNAL_W: SIGNAL_W, signalEntries: signalEntries, buildAffinity: buildAffinity, affinityScore: affinityScore, blendMatch: blendMatch, affinityReason: affinityReason, zPref: zPref, zMovie: zMovie
   };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }

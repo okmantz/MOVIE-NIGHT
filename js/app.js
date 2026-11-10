@@ -42,6 +42,24 @@
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
   function listFor(media) { return media === 'shows' ? SHOW_LIST : MOVIES; }
 
+  /* Line icons (replace the emoji that used to decorate every screen). */
+  function ic(path, size, fill) {
+    return '<svg class="i" viewBox="0 0 24 24" width="' + (size || 16) + '" height="' + (size || 16) + '" fill="' + (fill ? 'currentColor' : 'none') +
+      '" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
+  }
+  var THUMB = '<path d="M7 11v9H4v-9zM7 11l4-8a2 2 0 0 1 2 2v4h6.2a1.8 1.8 0 0 1 1.8 2.1l-1.2 7A2 2 0 0 1 17.8 20H7"/>';
+  var ICON = {
+    up: THUMB, down: '<g transform="rotate(180 12 12)">' + THUMB + '</g>',
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    bookmark: '<path d="M7 4h10v16l-5-3.5L7 20z"/>', chevUp: '<path d="M6 15l6-6 6 6"/>', chevDown: '<path d="M6 9l6 6 6-6"/>',
+    swap: '<path d="M7 7h11l-3-3M17 17H6l3 3"/>', filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+    film: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 9h16M4 15h16M8 5v14M16 5v14"/>',
+    tv: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', award: '<circle cx="12" cy="9" r="5"/><path d="M9 13.5L8 21l4-2.5 4 2.5-1-7.5"/>'
+  };
+
   /* ---------- covers & cards ---------- */
   var PALETTES = {
     Action: ['#7a1f1f', '#2b0d0d'], 'Sci-Fi': ['#14335c', '#060d1d'], Horror: ['#3d0a2e', '#12040e'],
@@ -109,7 +127,29 @@
     state.activeId = me ? me.id : null;
   }
   refreshPeople();
+  /* Adaptive affinity: rebuilt lazily from every signal the person has given
+     (favorites, thumbs, watchlist, watched, own Top 20, quiz passes). */
+  var affCache = {};
+  function affinityFor(p) {
+    if (!p) return null;
+    var c = affCache[p.id];
+    if (c) return c;
+    var t = p.top20 || {}, mine = t.mine || {}, auto = t.auto || [];
+    function human(a) { return (a || []).filter(function (id) { return auto.indexOf(id) < 0; }); }
+    c = E.buildAffinity(E.signalEntries({
+      favorites: p.favorites, showFavorites: p.showFavorites, watchlist: p.watchlist, showWatchlist: p.showWatchlist,
+      watched: p.watched, ratings: p.ratings, events: p.events, mine: { movies: human(mine.movies), shows: human(mine.shows) }
+    }), anyById);
+    affCache[p.id] = c;
+    return c;
+  }
+  /* Taste-vector match, sharpened by what this person has actually done. */
+  function personalMatch(p, m) {
+    E.calibrate(listFor(isShow(m) ? 'shows' : 'movies'));
+    return E.blendMatch(E.matchPercent(p.taste, m), E.affinityScore(affinityFor(p), m));
+  }
   function save() {
+    affCache = {};
     state.profiles.forEach(function (p) {
       A.saveData(p.id, {
         favorites: p.favorites, watchlist: p.watchlist, showFavorites: p.showFavorites, showWatchlist: p.showWatchlist,
@@ -202,8 +242,9 @@
   /* ---------- avatars ---------- */
   function avatarHTML(p, size) {
     var bg = AV_BGS[p.bg] || p.color || '#e9b756';
-    var inner = p.style === 'mono' ? esc((p.name || '?').trim().charAt(0).toUpperCase()) : esc(p.emoji || '🎬');
-    return '<span class="avatar' + (p.style === 'mono' ? ' mono' : '') + (p.frame && p.frame !== 'none' ? ' frame-' + p.frame : '') + (size ? ' avatar-' + size : '') +
+    var mono = p.style === 'mono' || !p.emoji;
+    var inner = mono ? esc((p.name || '?').trim().charAt(0).toUpperCase()) : esc(p.emoji);
+    return '<span class="avatar' + (mono ? ' mono' : '') + (p.frame && p.frame !== 'none' ? ' frame-' + p.frame : '') + (size ? ' avatar-' + size : '') +
       '" style="--av-bg:' + esc(bg) + ';background:' + esc(bg) + '" aria-hidden="true">' + inner + '</span>';
   }
   function renderHeaderProfile() {
@@ -250,21 +291,22 @@
   function wlRow(m) {
     return '<div class="wl-row"><button class="wl-open" data-open="' + m.id + '">' + coverHTML(m) +
       '<span><span class="wl-title">' + esc(m.title) + '</span><br><span class="wl-sub">' + esc(metaLine(yearText(m), (m.genres || [])[0])) + '</span></span></button>' +
-      '<span class="wl-actions"><button class="icon-btn" data-wl-watched="' + m.id + '" title="Mark watched and remove" aria-label="Mark watched">✓</button>' +
-      '<button class="icon-btn" data-wl-remove="' + m.id + '" title="Remove" aria-label="Remove from watchlist">✕</button></span></div>';
+      '<span class="wl-actions"><button class="icon-btn" data-wl-watched="' + m.id + '" title="Mark watched and remove" aria-label="Mark watched">' + ic(ICON.check, 16) + '</button>' +
+      '<button class="icon-btn" data-wl-remove="' + m.id + '" title="Remove" aria-label="Remove from watchlist">' + ic(ICON.x, 16) + '</button></span></div>';
   }
   function renderDrawer() {
-    var p = me(), body = $('#drawer-body');
+    var p = me(), body = $('#drawer-body'), keepTop = body.scrollTop;
     function section(key, label, icon, ids) {
       var items = ids.map(anyById).filter(Boolean);
       return '<div class="acc' + (drawerOpen[key] ? ' open' : '') + '" data-acc="' + key + '"><button class="acc-head" aria-expanded="' + !!drawerOpen[key] + '">' +
         '<span class="ico">' + icon + '</span><span><b>' + label + '</b><small>' + items.length + (items.length === 1 ? ' title' : ' titles') + '</small></span>' +
         '<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
         '<div class="acc-body"><div class="acc-inner"><div>' +
-        (items.length ? items.slice().reverse().map(wlRow).join('') : '<div class="empty"><b>Nothing here yet</b>Tap “+ Watchlist” on any ' + (key === 'shows' ? 'show' : 'movie') + '.</div>') +
+        (items.length ? items.slice().reverse().map(wlRow).join('') : '<div class="empty"><b>Nothing here yet</b>Use Watchlist on any ' + (key === 'shows' ? 'show' : 'movie') + '.</div>') +
         '</div></div></div></div>';
     }
-    body.innerHTML = section('movies', 'Movie watchlist', '🎬', p.watchlist) + section('shows', 'TV watchlist', '📺', p.showWatchlist);
+    body.innerHTML = section('movies', 'Movie watchlist', ic(ICON.film, 18), p.watchlist) + section('shows', 'TV watchlist', ic(ICON.tv, 18), p.showWatchlist);
+    body.scrollTop = keepTop;
   }
   $('#menu-btn').addEventListener('click', openDrawer);
   $('#drawer-close').addEventListener('click', closeDrawer);
@@ -279,18 +321,21 @@
   });
   function removeFromWatchlist(id) {
     var p = me(), f = showById[id] ? 'showWatchlist' : 'watchlist', i = p[f].indexOf(id);
-    if (i >= 0) p[f].splice(i, 1);
+    if (i >= 0) { p[f].splice(i, 1); applySignal(p, id, 'watchlist', false); }
     save(); renderDrawer(); renderHeaderProfile();
   }
   function toggleList(listName, id) {
     var p = me(), field = showById[id] ? 'show' + listName.charAt(0).toUpperCase() + listName.slice(1) : listName;
     var i = p[field].indexOf(id);
     if (i === -1) p[field].push(id); else p[field].splice(i, 1);
+    applySignal(p, id, listName === 'favorites' ? 'fav' : 'watchlist', i === -1);
+    logEvent(id, (i === -1 ? '' : 'un') + (listName === 'favorites' ? 'favorited' : 'watchlisted'));
     save(); renderHeaderProfile();
     return i === -1;
   }
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') return;
+    if (picker) { closePicker(); return; }
     if (!$('#detail-overlay').classList.contains('hidden')) closeDetail(); else closeDrawer();
   });
   $('#header-profile').addEventListener('click', function () { if (state.activeId) goto('account'); else openWelcome('main'); });
@@ -356,13 +401,14 @@
   }
 
   /* ---------- thumbs + watched on every card ---------- */
+  function watchedBtnInner(w) { return w ? ic(ICON.check, 13) + ' Watched' : ic(ICON.plus, 13) + ' Watched'; }
   function quickSpansHTML(m) {
     var p = profile();
     var r = (p && p.ratings && p.ratings[m.id]) || 0;
     var w = !!(p && p.watched && p.watched.indexOf(m.id) >= 0);
-    return '<span class="qbtn' + (r === 1 ? ' on' : '') + '" data-qrate="1" data-qid="' + m.id + '" role="button" title="Love it">\uD83D\uDC4D</span>' +
-      '<span class="qbtn' + (r === -1 ? ' on' : '') + '" data-qrate="-1" data-qid="' + m.id + '" role="button" title="Not for me">\uD83D\uDC4E</span>' +
-      '<span class="qbtn qwatch' + (w ? ' on' : '') + '" data-qwatch="' + m.id + '" role="button" title="Mark as already watched">' + (w ? '\u2713 Watched' : '\uFF0B Watched') + '</span>';
+    return '<span class="qbtn qi' + (r === 1 ? ' on' : '') + '" data-qrate="1" data-qid="' + m.id + '" role="button" title="Love it" aria-label="Love it">' + ic(ICON.up, 15) + '</span>' +
+      '<span class="qbtn qi' + (r === -1 ? ' on' : '') + '" data-qrate="-1" data-qid="' + m.id + '" role="button" title="Not for me" aria-label="Not for me">' + ic(ICON.down, 15) + '</span>' +
+      '<span class="qbtn qwatch' + (w ? ' on' : '') + '" data-qwatch="' + m.id + '" role="button" title="Mark as already watched">' + watchedBtnInner(w) + '</span>';
   }
   function refreshQuick(id) {
     var p = profile(); if (!p) return;
@@ -373,7 +419,7 @@
     });
     document.querySelectorAll('[data-qwatch="' + id + '"]').forEach(function (b) {
       b.classList.toggle('on', w);
-      b.textContent = w ? '\u2713 Watched' : '\uFF0B Watched';
+      b.innerHTML = watchedBtnInner(w);
     });
   }
   /* Capture phase so a tap on thumbs/watched never also opens the card. */
@@ -397,6 +443,12 @@
 
 
   /* ---------- cards & result cards ---------- */
+  function wlLabel(on) { return on ? ic(ICON.check, 15) + 'On watchlist' : ic(ICON.plus, 15) + 'Watchlist'; }
+  function listHas(listName, id) {
+    var p = me(); if (!p) return false;
+    var f = showById[id] ? 'show' + listName.charAt(0).toUpperCase() + listName.slice(1) : listName;
+    return (p[f] || []).indexOf(id) >= 0;
+  }
   function cardHTML(m) {
     return '<button class="card" data-open="' + m.id + '">' + coverHTML(m) +
       '<div class="card-body"><div class="card-title">' + esc(m.title) + '</div>' +
@@ -424,11 +476,11 @@
       (ringPct != null ? '<div class="match-row">' + ringHTML(ringPct) + '<div>' + (extra || '') + '</div></div>' : (extra || '')) +
       '<div class="why">' + esc(r.why || '') + (tw ? ' ' + esc(tw) : '') + '</div>' +
       '<div class="result-actions"><button class="btn btn-sm" data-open="' + m.id + '">Details</button>' +
-      '<button class="btn btn-sm" data-watch="' + m.id + '">+ Watchlist</button>' + quickSpansHTML(m) + '</div></div></div>';
+      '<button class="btn btn-sm" data-watch="' + m.id + '">' + wlLabel(listHas('watchlist', m.id)) + '</button>' + quickSpansHTML(m) + '</div></div></div>';
   }
   document.addEventListener('click', function (ev) {
     var w = ev.target.closest('[data-watch]');
-    if (w) { var on = toggleList('watchlist', w.dataset.watch); w.textContent = on ? '✓ On watchlist' : '+ Watchlist'; }
+    if (w) { var on = toggleList('watchlist', w.dataset.watch); w.innerHTML = wlLabel(on); }
   });
   function vectorBars(vector) {
     return E.AXES.map(function (axis) {
@@ -471,7 +523,8 @@
     var pool = MOVIES.concat(SHOW_LIST);
     var m = E.pickTonight(pool, {
       recent: recent.slice(-60).concat(forceNew && heroId ? [heroId] : []),
-      watched: p ? p.watched : [], rated: p ? p.ratings : {}, taste: hasTaste(p) ? p.taste : null
+      watched: p ? p.watched : [], rated: p ? p.ratings : {}, taste: hasTaste(p) ? p.taste : null,
+      affinity: p ? affinityFor(p) : null
     });
     if (!m) return;
     heroId = m.id; recent.push(m.id); lsSet(RECENT_KEY, recent.slice(-120));
@@ -480,7 +533,7 @@
   function renderHero(m) {
     var src = posterOf(m), p = me(), on = (isShow(m) ? p.showWatchlist : p.watchlist).indexOf(m.id) >= 0;
     var score = R.badge(m);
-    var fit = hasTaste(p) ? E.matchPercent(p.taste, m) : null;
+    var fit = hasTaste(p) ? personalMatch(p, m) : null;
     $('#hero-featured').innerHTML =
       '<div class="hero"><div class="hero-bg" style="background-image:url(&quot;' + esc(src) + '&quot;)"></div><div class="hero-body">' +
       '<div class="hero-poster" data-open="' + m.id + '">' + coverHTML(m) + '</div>' +
@@ -490,9 +543,9 @@
       '<div class="score-row">' + (score ? '<span class="score"><i style="color:var(--accent)">★</i> ' + score + '</span>' : '') + (fit != null ? '<span class="score">' + fit + '% match</span>' : '') + '</div></div>' +
       '<p class="hero-desc">' + esc(m.description) + '</p>' +
       '<div class="hero-actions"><button class="btn btn-primary" data-open="' + m.id + '">Details</button>' +
-      '<button class="btn" id="hero-wl">' + (on ? '✓ On watchlist' : '+ Watchlist') + '</button>' +
-      '<button class="btn" id="hero-another">↻ Another pick</button></div></div></div>';
-    $('#hero-wl').onclick = function () { var now = toggleList('watchlist', m.id); this.textContent = now ? '✓ On watchlist' : '+ Watchlist'; };
+      '<button class="btn" id="hero-wl">' + wlLabel(on) + '</button>' +
+      '<button class="btn" id="hero-another">Another pick</button></div></div></div>';
+    $('#hero-wl').onclick = function () { var now = toggleList('watchlist', m.id); this.innerHTML = wlLabel(now); };
     $('#hero-another').onclick = function () { pickHero(true); };
   }
 
@@ -525,7 +578,7 @@
     var p = me();
     if (browse.sort === 'match' && hasTaste(p)) {
       E.calibrate(list);
-      var s = {}; out.forEach(function (m) { s[m.id] = E.matchPercent(p.taste, m) + E.quality(m) * 6; });
+      var s = {}; out.forEach(function (m) { s[m.id] = personalMatch(p, m) + E.quality(m) * 6; });
       out.sort(function (a, b) { return s[b.id] - s[a.id]; });
     } else if (browse.sort === 'new') out.sort(function (a, b) { return (b.year || b.startYear || 0) - (a.year || a.startYear || 0); });
     else if (browse.sort === 'old') out.sort(function (a, b) { return (a.year || a.startYear || 0) - (b.year || b.startYear || 0); });
@@ -562,11 +615,12 @@
   function closeDetail() {
     $('#detail-overlay').classList.add('hidden');
     if (!$('#drawer').classList.contains('open')) document.body.classList.remove('locked');
+    if (currentView === 'top20' && typeof rerenderTop20 === 'function') rerenderTop20();
   }
   function detailFit(m) {
     var p = me(); if (!state.activeId || !hasTaste(p)) return '';
-    E.calibrate(listFor(isShow(m) ? 'shows' : 'movies'));
-    return '<div class="detail-why"><strong>' + E.matchPercent(p.taste, m) + '% match</strong> for your taste. ' + esc(E.whyFor(p.taste, m)) + ' ' + esc(traitWhy(p, m)) + '</div>';
+    var why = E.affinityReason(affinityFor(p), m);
+    return '<div class="detail-why"><strong>' + personalMatch(p, m) + '% match</strong> for your taste. ' + esc(E.whyFor(p.taste, m)) + ' ' + esc(why || traitWhy(p, m)) + '</div>';
   }
   function ratingsHTML(m, live) {
     var d = R.merge(m, live), tiles = [];
@@ -579,41 +633,72 @@
     else if (live && live.limited) hint = '<p class="fineprint">OMDb daily limit reached — live scores will return tomorrow.</p>';
     else if (live && live.badKey) hint = '<p class="fineprint">Your OMDb key was rejected. Check it in Account → Ratings &amp; reviews.</p>';
     return '<div class="ratings-block">' + (tiles.length ? '<div class="ratings-grid">' + tiles.join('') + '</div>' : '<p class="muted" style="margin:0">No public ratings for this title yet.</p>') +
-      (d.awards ? '<p class="fineprint" style="margin:0">🏆 ' + esc(d.awards) + '</p>' : '') + hint +
-      '<div class="review-links">' + R.links(m).map(function (l) { return '<a class="btn btn-sm" target="_blank" rel="noopener" href="' + esc(l.url) + '">' + esc(l.label) + ' reviews ↗</a>'; }).join('') + '</div></div>';
+      (d.awards ? '<p class="fineprint" style="margin:0">' + esc(d.awards) + '</p>' : '') + hint +
+      '<div class="review-links">' + R.links(m).map(function (l) { return '<a class="btn btn-sm" target="_blank" rel="noopener" href="' + esc(l.url) + '">' + esc(l.label) + ' reviews</a>'; }).join('') + '</div></div>';
+  }
+  function detailFlags(id) {
+    var p = me(), tv = !!showById[id];
+    return {
+      fav: (tv ? p.showFavorites : p.favorites).indexOf(id) !== -1,
+      wl: (tv ? p.showWatchlist : p.watchlist).indexOf(id) !== -1,
+      rating: p.ratings[id] || 0, watched: p.watched.indexOf(id) !== -1,
+      t20: p.top20.mine[tv ? 'shows' : 'movies'].indexOf(id) !== -1
+    };
+  }
+  function favHTML(on) { return ic(ICON.heart, 16, on) + (on ? 'Favorited' : 'Favorite'); }
+  function t20HTML(on) { return (on ? ic(ICON.check, 15) : ic(ICON.plus, 15)) + 'Top 20'; }
+  function dwlHTML(on) { return (on ? ic(ICON.check, 15) : ic(ICON.plus, 15)) + 'Watchlist'; }
+  function watchedHTML(on) { return on ? ic(ICON.check, 15) + 'Already watched' : ic(ICON.plus, 15) + 'Already watched'; }
+  /* Update the sheet in place. The sheet is NOT rebuilt, so the scroll position
+     never moves and several buttons can be pressed in a row. */
+  function refreshDetail(id) {
+    if (!$('#detail-fav')) return;
+    var f = detailFlags(id), m = anyById(id);
+    function setBtn(sel, on, html) { var b = $(sel); if (b) { b.classList.toggle('btn-primary', on); b.innerHTML = html; } }
+    setBtn('#detail-fav', f.fav, favHTML(f.fav));
+    setBtn('#detail-wl', f.wl, dwlHTML(f.wl));
+    setBtn('#detail-t20', f.t20, t20HTML(f.t20));
+    var w = $('#detail-watched'); if (w) w.innerHTML = watchedHTML(f.watched);
+    $$('#detail-sheet [data-rate]').forEach(function (b) {
+      var v = Number(b.dataset.rate);
+      b.className = 'rate-btn' + (f.rating === v ? ' selected ' + (v === 1 ? 'up' : 'down') : '');
+    });
+    var fit = $('#detail-fit'); if (fit && m) fit.innerHTML = detailFit(m);
+    refreshQuick(id);
   }
   function openDetail(id) {
     var m = anyById(id); if (!m) return;
-    var tv = isShow(m), p = me();
-    var fav = (tv ? p.showFavorites : p.favorites).indexOf(id) !== -1, wl = (tv ? p.showWatchlist : p.watchlist).indexOf(id) !== -1;
-    var rating = p.ratings[id] || 0, watched = p.watched.indexOf(id) !== -1;
+    var tv = isShow(m), p = me(), f = detailFlags(id);
     var similar = E.similarMovies(listFor(tv ? 'shows' : 'movies'), m, 6);
     var meta = tv
-      ? metaLine(yearText(m), m.status, lengthLabel(m), m.network ? '📺 ' + m.network : '', m.creator ? 'Created by ' + m.creator : '', m.rating ? 'Rated ' + m.rating : '')
-      : metaLine(m.year, (m.director && m.director !== 'Unknown') ? 'Directed by ' + m.director : '', runtimeLabel(m.runtime), m.rating ? 'Rated ' + m.rating : '');
+      ? metaLine(yearText(m), m.status, lengthLabel(m), m.network, m.creator ? 'Created by ' + m.creator : '', m.rating ? 'Rated ' + String(m.rating).replace(/-/g, '\u2011') : '')
+      : metaLine(m.year, (m.director && m.director !== 'Unknown') ? 'Directed by ' + m.director : '', runtimeLabel(m.runtime), m.rating ? 'Rated ' + String(m.rating).replace(/-/g, '\u2011') : '');
     var plat = (m.pl && m.pl.length) ? '<div class="platforms"><span class="muted" style="font-size:.8rem">Streaming on</span>' + m.pl.map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') + '</div>' : '';
     $('#detail-sheet').innerHTML =
       '<div class="sheet-hero">' + (posterOf(m) ? '<div class="sheet-backdrop" style="background-image:url(&quot;' + esc(posterOf(m)) + '&quot;)"></div>' : '') + coverHTML(m) +
-      '<button class="sheet-close" id="detail-close" aria-label="Close">✕</button></div>' +
+      '<button class="sheet-close" id="detail-close" aria-label="Close">' + ic(ICON.x, 18) + '</button></div>' +
       '<div class="sheet-body"><h2>' + esc(m.title) + '</h2><p class="meta-line">' + esc(meta) + '</p>' +
       '<div>' + (m.genres || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' ') + '</div>' +
-      detailFit(m) + '<p>' + esc(m.description) + '</p>' + plat +
-      '<div class="row"><button class="btn ' + (fav ? 'btn-primary' : '') + '" id="detail-fav">' + (fav ? '♥ Favorited' : '♡ Favorite') + '</button>' +
-      '<button class="btn ' + (wl ? 'btn-primary' : '') + '" id="detail-wl">' + (wl ? '✓ On watchlist' : '+ Watchlist') + '</button></div>' +
-      '<div class="rating-row"><span>Rate this title</span><button class="rate-btn ' + (rating === 1 ? 'selected up' : '') + '" data-rate="1">👍</button><button class="rate-btn ' + (rating === -1 ? 'selected down' : '') + '" data-rate="-1">👎</button>' +
-      '<button class="btn btn-ghost btn-sm" id="detail-watched">' + (watched ? '✓ Already watched' : '＋ Already watched') + '</button></div>' +
+      '<div id="detail-fit">' + detailFit(m) + '</div><p>' + esc(m.description) + '</p>' + plat +
+      '<div class="row detail-actions"><button class="btn ' + (f.fav ? 'btn-primary' : '') + '" id="detail-fav">' + favHTML(f.fav) + '</button>' +
+      '<button class="btn ' + (f.wl ? 'btn-primary' : '') + '" id="detail-wl">' + dwlHTML(f.wl) + '</button>' +
+      '<button class="btn ' + (f.t20 ? 'btn-primary' : '') + '" id="detail-t20">' + t20HTML(f.t20) + '</button></div>' +
+      '<div class="rating-row"><span>Rate this title</span><button class="rate-btn ' + (f.rating === 1 ? 'selected up' : '') + '" data-rate="1" aria-label="Love it">' + ic(ICON.up, 18) + '</button><button class="rate-btn ' + (f.rating === -1 ? 'selected down' : '') + '" data-rate="-1" aria-label="Not for me">' + ic(ICON.down, 18) + '</button>' +
+      '<button class="btn btn-ghost btn-sm" id="detail-watched">' + watchedHTML(f.watched) + '</button></div>' +
       '<h3>Ratings &amp; reviews</h3><div id="detail-ratings">' + ratingsHTML(m, null) + '</div>' +
       '<h3>Taste profile</h3>' + vectorBars(m.vector) +
       '<div class="kw-row">' + (m.keywords || []).map(function (k) { return '<span class="kw">#' + esc(k) + '</span>'; }).join('') + '</div>' +
       '<h3>More like this</h3><div class="similar-grid">' +
       similar.map(function (s) { return '<button class="card" data-open="' + s.id + '">' + coverHTML(s) + '<div class="card-body"><div class="card-title">' + esc(s.title) + '</div><div class="card-sub">' + esc(yearText(s)) + '</div></div></button>'; }).join('') +
       '</div></div>';
+    $('#detail-sheet').dataset.id = id;
     $('#detail-overlay').classList.remove('hidden'); document.body.classList.add('locked');
     $('#detail-close').addEventListener('click', closeDetail);
-    $('#detail-fav').addEventListener('click', function () { toggleList('favorites', id); openDetail(id); });
-    $('#detail-wl').addEventListener('click', function () { toggleList('watchlist', id); openDetail(id); });
-    $('#detail-watched').addEventListener('click', function () { setWatched(id, !watched); openDetail(id); });
-    $$('#detail-sheet [data-rate]').forEach(function (b) { b.addEventListener('click', function () { rateTitle(id, Number(b.dataset.rate)); openDetail(id); }); });
+    $('#detail-fav').addEventListener('click', function () { toggleList('favorites', id); refreshDetail(id); });
+    $('#detail-wl').addEventListener('click', function () { toggleList('watchlist', id); refreshDetail(id); });
+    $('#detail-t20').addEventListener('click', function () { toggleMine(id); refreshDetail(id); });
+    $('#detail-watched').addEventListener('click', function () { setWatched(id, detailFlags(id).watched ? false : true); refreshDetail(id); });
+    $$('#detail-sheet [data-rate]').forEach(function (b) { b.addEventListener('click', function () { rateTitle(id, Number(b.dataset.rate)); refreshDetail(id); }); });
     $('#detail-sheet').scrollTop = 0;
     if (R.hasKey()) R.fetchLive(m).then(function (live) {
       var box = $('#detail-ratings');
@@ -621,31 +706,35 @@
     });
   }
   $('#detail-overlay').addEventListener('click', function (ev) { if (ev.target === this) closeDetail(); });
+  /* One place that turns an action into taste. Every signal is reversible,
+     so undoing an action (un-favoriting, switching a thumb) takes back
+     exactly what it added. */
+  var TASTE_W = { fav: 0.9, like: 0.65, dislike: -0.55, watchlist: 0.3, top20: 0.5, watched: 0.25 };
+  function applySignal(p, id, key, on) {
+    var m = anyById(id); if (!p || !m || p.id === '__temp__') return;
+    E.addMovie(p.taste, m, (on ? 1 : -1) * TASTE_W[key]);
+    snapshotTaste(p);
+  }
   function rateTitle(id, score) {
     var p = profile(); if (!p) return;
     p.ratings = p.ratings || {};
-    var togglingOff = p.ratings[id] === score;
-    if (togglingOff) delete p.ratings[id]; else p.ratings[id] = score;
-    logEvent(id, score === 1 ? 'liked' : 'disliked', score);
-    var m = anyById(id);
-    if (m) E.addMovie(p.taste, m, togglingOff ? (score === 1 ? -0.65 : 0.55) : (score === 1 ? 0.65 : -0.55));
-    snapshotTaste(p);
+    var prev = p.ratings[id] || 0, key = score === 1 ? 'like' : 'dislike', off = prev === score;
+    if (prev) applySignal(p, id, prev === 1 ? 'like' : 'dislike', false);
+    if (off) delete p.ratings[id]; else { p.ratings[id] = score; applySignal(p, id, key, true); }
+    logEvent(id, off ? 'unrated' : (score === 1 ? 'liked' : 'disliked'), off ? null : score);
     save(); checkAchievements(p); refreshQuick(id);
-    toast(togglingOff ? 'Rating removed' : (score === 1 ? 'Taste updated: liked' : 'Taste updated: disliked'));
+    toast(off ? 'Rating removed' : (score === 1 ? 'Saved. More like this will rank higher.' : 'Saved. We will steer away from this.'));
   }
   function setWatched(id, yes) {
     var p = profile(); if (!p) return;
     var i = p.watched.indexOf(id);
     if (yes && i < 0) {
-      p.watched.push(id);
-      var wt = anyById(id); if (wt) E.addMovie(p.taste, wt, 0.25);
+      p.watched.push(id); applySignal(p, id, 'watched', true);
       logEvent(id, 'watched'); toast('Added to watched history');
     } else if (!yes && i >= 0) {
-      p.watched.splice(i, 1);
-      var ut = anyById(id); if (ut) E.addMovie(p.taste, ut, -0.25);
+      p.watched.splice(i, 1); applySignal(p, id, 'watched', false);
       logEvent(id, 'unwatched');
     }
-    snapshotTaste(p);
     checkAchievements(p); save(); refreshQuick(id);
   }
 
@@ -831,10 +920,10 @@
       var n = seasonalProgress(p, s);
       var active = s.months.indexOf(cm) >= 0;
       var done = n >= s.goal;
-      var state = done ? '\uD83C\uDFC6 Complete' : active
-        ? '\u23F3 Limited-time \u00B7 ' + n + '/' + s.goal + ' \u00B7 ends ' + MONTH_NAMES[s.months[s.months.length - 1] - 1]
+      var state = done ? 'Complete' : active
+        ? 'Limited time \u00B7 ' + n + '/' + s.goal + ' \u00B7 ends ' + MONTH_NAMES[s.months[s.months.length - 1] - 1]
         : 'Starts ' + MONTH_NAMES[s.months[0] - 1];
-      return '<div class="achievement ' + (done ? 'earned' : '') + '"><b>' + s.icon + ' ' + s.name + '</b><small>' + s.label + '</small><small>' + state + '</small></div>';
+      return '<div class="achievement ' + (done ? 'earned' : '') + '"><b>' + s.name + '</b><small>' + s.label + '</small><small>' + state + '</small></div>';
     }).join('');
     return '<h4 class="ach-sub">Seasonal collections &amp; limited-time challenges</h4><div class="achievement-grid">' + cards + '</div>';
   }
@@ -845,7 +934,7 @@
       var done = p.achievements.indexOf(a[0]) >= 0;
       var pr = prog[a[0]] || [0, 1];
       var pctW = Math.min(100, Math.round(pr[0] / pr[1] * 100));
-      return '<div class="achievement ' + (done ? 'earned' : '') + '"><b>' + (done ? '\uD83C\uDFC6' : '\uD83D\uDD12') + ' ' + a[1] + '</b><small>' + a[2] + '</small>' +
+      return '<div class="achievement ' + (done ? 'earned' : '') + '"><b>' + (done ? ic(ICON.award, 15) : ic(ICON.lock, 15)) + ' ' + a[1] + '</b><small>' + a[2] + '</small>' +
         '<span class="ach-bar"><i style="width:' + pctW + '%"></i></span><small>' + Math.min(pr[0], pr[1]) + ' / ' + pr[1] + '</small></div>';
     }).join('');
     return '<div class="achievement-grid">' + grid + '</div>' + seasonalHTML(p);
@@ -877,15 +966,29 @@
 
   /* ---------- Quiz (solo + couples, movies + TV) ---------- */
   var quizPhase = 'setup', quiz = null;
-  var cfg = { who: 'solo', media: 'movies', moods: [], avoid: [], audience: '', length: '', era: '', rounds: 12, partner: '', guestName: '', mine: false };
+  var cfg = { who: 'solo', media: 'movies', moods: [], avoid: [], audience: '', era: '', rounds: 12, partner: '', guestName: '', mine: false };
+  var qsMoreOpen = false;
   var TEMP_ID = '__temp__';
   function player(id) {
-    if (id === TEMP_ID) return { id: TEMP_ID, name: cfg.guestName.trim() || 'Guest', emoji: '🙂', style: 'emoji', bg: '', frame: 'none', color: '#8a8697', taste: E.emptyPreference(), watched: [], ratings: {}, history: [] };
+    if (id === TEMP_ID) return { id: TEMP_ID, name: cfg.guestName.trim() || 'Guest', emoji: '', style: 'mono', bg: '', frame: 'none', color: '#8a8697', taste: E.emptyPreference(), watched: [], ratings: {}, history: [] };
     return profile(id);
   }
   function platformCoverage(list) { var n = 0; for (var i = 0; i < list.length; i++) if (list[i].pl && list[i].pl.length) n++; return n; }
   function segHTML(attr, opts, cur) {
     return '<div class="seg-group">' + opts.map(function (o) { return '<button class="seg' + (String(o[0]) === String(cur) ? ' selected' : '') + '" ' + attr + '="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>';
+  }
+  var AUDIENCES = [['', 'Anyone'], ['date', 'Date night'], ['family', 'Family'], ['adults', 'Adults']];
+  var ERAS = [['', 'Any'], ['modern', '2000s on'], ['recent', '2015+'], ['classic', 'Before 2000']];
+  var ROUNDS = [[8, 'Quick · 8'], [12, 'Balanced · 12'], [16, 'Precise · 16']];
+  function pick2(arr, v) { return (arr.filter(function (x) { return String(x[0]) === String(v); })[0] || [])[1]; }
+  function fineTuneSummary() {
+    var b = [];
+    if (cfg.avoid.length) b.push('No ' + cfg.avoid.join(', ').toLowerCase());
+    if (cfg.audience) b.push(pick2(AUDIENCES, cfg.audience));
+    if (cfg.era) b.push(pick2(ERAS, cfg.era));
+    if (cfg.mine) b.push('My services');
+    b.push(cfg.rounds + ' questions');
+    return b.join(' · ');
   }
   function renderQuizSetup() {
     var p = me(), tv = cfg.media === 'shows', couple = cfg.who === 'couple';
@@ -893,41 +996,37 @@
     var others = state.profiles.filter(function (x) { return x.id !== state.activeId && !x.guest; });
     var plats = p && p.quizProfile && p.quizProfile.platforms && p.quizProfile.platforms.filter(function (x) { return /\+|Netflix|Prime|Max|Hulu|Peacock/.test(x); });
     var showPlat = plats && plats.length && platformCoverage(listFor(cfg.media)) >= 300;
-    var h = '<div class="page-head"><span class="eyebrow">Mood match</span><h1>' + (couple ? 'Watch together' : (tv ? 'Find your next series' : 'Find tonight\'s movie')) + '</h1>' +
-      '<p>Tell us the mood first — then a few this-or-that picks narrow the whole catalog to the few titles that fit <em>tonight</em>.</p></div>';
-    h += '<div class="setup-block"><div class="label">Who\'s watching</div><div class="mode-cards">' +
-      '<button class="mode-card' + (!couple ? ' selected' : '') + '" data-who="solo"><span class="em">🙋</span><b>Just me</b><small>You choose, we match your mood.</small></button>' +
-      '<button class="mode-card' + (couple ? ' selected' : '') + '" data-who="couple"><span class="em">💞</span><b>Couples</b><small>Take turns. We find what you\'ll both enjoy.</small></button></div></div>';
-    h += '<div class="setup-block"><div class="label">What to watch</div>' + segHTML('data-qmedia', [['movies', 'Movies'], ['shows', 'TV shows']], cfg.media) + '</div>';
+    var h = '<div class="qs-head"><h1>' + (couple ? 'Watch together' : (tv ? 'Find your next series' : 'Find tonight\'s movie')) + '</h1>' +
+      '<p>Pick a mood, answer a few this-or-that questions, get your match.</p></div>';
+    h += '<div class="qs-row">' + segHTML('data-who', [['solo', 'Just me'], ['couple', 'Couples']], cfg.who) + segHTML('data-qmedia', [['movies', 'Movies'], ['shows', 'TV']], cfg.media) + '</div>';
     if (couple) {
-      h += '<div class="setup-block"><div class="label">Players</div><div class="player-row"><div class="field"><span class="label" style="margin:0">Player 1</span><div class="input" style="display:flex;align-items:center;gap:8px">' + avatarHTML(p) + esc(p.name) + '</div></div>' +
-        '<div class="field"><span class="label" style="margin:0">Player 2</span><select id="q-partner" aria-label="Second player">' +
-        others.map(function (o) { return '<option value="' + o.id + '"' + (cfg.partner === o.id ? ' selected' : '') + '>' + esc(o.emoji + ' ' + o.name) + '</option>'; }).join('') +
-        '<option value="' + TEMP_ID + '"' + (cfg.partner === TEMP_ID ? ' selected' : '') + '>🙂 Someone else (just for tonight)</option></select></div></div>' +
-        (cfg.partner === TEMP_ID ? '<input id="q-guest" class="input" style="margin-top:10px" maxlength="20" placeholder="Their name (optional)" value="' + esc(cfg.guestName) + '">' : '') + '</div>';
+      h += '<div class="qs-players"><div class="field"><span class="label">Player 1</span><div class="input qs-me">' + avatarHTML(p) + esc(p.name) + '</div></div>' +
+        '<div class="field"><span class="label">Player 2</span><select id="q-partner" aria-label="Second player">' +
+        others.map(function (o) { return '<option value="' + o.id + '"' + (cfg.partner === o.id ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('') +
+        '<option value="' + TEMP_ID + '"' + (cfg.partner === TEMP_ID ? ' selected' : '') + '>Someone else, just tonight</option></select></div></div>' +
+        (cfg.partner === TEMP_ID ? '<input id="q-guest" class="input" style="margin-top:8px" maxlength="20" placeholder="Their name (optional)" value="' + esc(cfg.guestName) + '">' : '');
     }
-    h += '<div class="setup-block"><div class="label">Tonight\'s mood <span class="muted">· pick up to 2</span></div><div class="mood-grid">' +
-      E.MOODS.map(function (m) { return '<button class="mood-chip' + (cfg.moods.indexOf(m.id) >= 0 ? ' on' : (cfg.moods.length >= 2 ? ' off' : '')) + '" data-mood="' + m.id + '"><span class="em">' + m.icon + '</span>' + esc(m.label) + '</button>'; }).join('') + '</div>' +
-      '<p class="setup-hint">Skipping this still works — the mood just makes the first picks sharper.</p></div>';
-    h += '<div class="setup-block"><div class="label">Not tonight <span class="muted">· we\'ll leave these out</span></div><div class="chips wrap">' +
-      E.AVOIDABLE.map(function (g) { return '<button class="mood-chip avoid' + (cfg.avoid.indexOf(g) >= 0 ? ' on' : '') + '" data-avoid="' + esc(g) + '" style="min-height:40px">' + esc(g) + '</button>'; }).join('') + '</div></div>';
-    h += '<div class="setup-block"><div class="label">Who is it for</div>' + segHTML('data-ctx-audience', [['', 'Anyone'], ['date', 'Date night'], ['family', 'Family'], ['adults', 'Adults']], cfg.audience) + '</div>';
-    if (!tv) h += '<div class="setup-block"><div class="label">How long</div>' + segHTML('data-ctx-length', [['', 'Any'], ['short', 'Under ~105m'], ['epic', '2h+']], cfg.length) + '</div>';
-    h += '<div class="setup-block"><div class="label">Era</div>' + segHTML('data-ctx-era', [['', 'Any'], ['modern', '2000s on'], ['recent', '2015+'], ['classic', 'Before 2000']], cfg.era) + '</div>';
-    if (showPlat) h += '<label class="switch setup-block"><input type="checkbox" id="q-mine"' + (cfg.mine ? ' checked' : '') + '> <span>Only on my streaming services</span></label>';
-    h += '<div class="setup-block"><div class="label">Length of quiz</div>' + segHTML('data-qrounds', [[8, 'Quick · 8'], [12, 'Balanced · 12'], [16, 'Precise · 16']], cfg.rounds) + '</div>';
-    h += '<button class="btn btn-primary btn-lg btn-block" id="quiz-start">Start the quiz</button>';
+    h += '<div class="qs-label">Tonight\'s mood <span class="muted">pick up to 2, or skip</span></div><div class="mood-pills">' +
+      E.MOODS.map(function (m) { return '<button class="mood-chip' + (cfg.moods.indexOf(m.id) >= 0 ? ' on' : (cfg.moods.length >= 2 ? ' off' : '')) + '" data-mood="' + m.id + '">' + esc(m.label) + '</button>'; }).join('') + '</div>';
+    h += '<details class="qs-more" id="qs-more"' + (qsMoreOpen ? ' open' : '') + '><summary><span class="qs-more-t">Fine-tune</span><span class="qs-more-s">' + esc(fineTuneSummary()) + '</span>' + ic(ICON.chevDown, 18) + '</summary><div class="qs-more-body">' +
+      '<div class="qs-field"><div class="label">Not tonight <span class="muted">we\'ll leave these out</span></div><div class="chips wrap">' +
+      E.AVOIDABLE.map(function (g) { return '<button class="mood-chip avoid' + (cfg.avoid.indexOf(g) >= 0 ? ' on' : '') + '" data-avoid="' + esc(g) + '">' + esc(g) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="qs-field"><div class="label">Who is it for</div>' + segHTML('data-ctx-audience', AUDIENCES, cfg.audience) + '</div>' +
+      '<div class="qs-field"><div class="label">Era</div>' + segHTML('data-ctx-era', ERAS, cfg.era) + '</div>' +
+      (showPlat ? '<label class="switch qs-field"><input type="checkbox" id="q-mine"' + (cfg.mine ? ' checked' : '') + '> <span>Only on my streaming services</span></label>' : '') +
+      '<div class="qs-field"><div class="label">Length of quiz</div>' + segHTML('data-qrounds', ROUNDS, cfg.rounds) + '</div></div></details>';
+    h += '<button class="btn btn-primary btn-lg btn-block qs-start" id="quiz-start">Start the quiz</button>';
     $('#quiz-setup').innerHTML = h;
+    var more = $('#qs-more'); if (more) more.addEventListener('toggle', function () { qsMoreOpen = more.open; });
   }
   $('#quiz-setup').addEventListener('click', function (ev) {
     var t = ev.target.closest('button'); if (!t) return;
     var d = t.dataset;
     if (d.who) cfg.who = d.who;
-    else if (d.qmedia) { cfg.media = d.qmedia; if (cfg.media === 'shows') cfg.length = ''; }
+    else if (d.qmedia) { cfg.media = d.qmedia; }
     else if (d.mood) { var i = cfg.moods.indexOf(d.mood); if (i >= 0) cfg.moods.splice(i, 1); else if (cfg.moods.length < 2) cfg.moods.push(d.mood); }
     else if (d.avoid !== undefined) { var j = cfg.avoid.indexOf(d.avoid); if (j >= 0) cfg.avoid.splice(j, 1); else cfg.avoid.push(d.avoid); }
     else if (d.ctxAudience !== undefined) cfg.audience = d.ctxAudience;
-    else if (d.ctxLength !== undefined) cfg.length = d.ctxLength;
     else if (d.ctxEra !== undefined) cfg.era = d.ctxEra;
     else if (d.qrounds) cfg.rounds = parseInt(d.qrounds, 10);
     else if (t.id === 'quiz-start') return startQuiz();
@@ -941,7 +1040,7 @@
   $('#quiz-setup').addEventListener('input', function (ev) { if (ev.target.id === 'q-guest') cfg.guestName = ev.target.value; });
 
   function quizCtx() {
-    var p = me(), c = { audience: cfg.audience, length: cfg.length, era: cfg.era, avoid: cfg.avoid.slice() };
+    var p = me(), c = { audience: cfg.audience, era: cfg.era, avoid: cfg.avoid.slice() };
     if (cfg.mine && p.quizProfile && p.quizProfile.platforms) c.platforms = p.quizProfile.platforms;
     return c;
   }
@@ -949,7 +1048,6 @@
     var b = [];
     cfg.moods.forEach(function (id) { var m = E.MOODS.filter(function (x) { return x.id === id; })[0]; if (m) b.push(m.label.toLowerCase()); });
     if (cfg.audience === 'date') b.push('date night'); else if (cfg.audience === 'family') b.push('family-friendly');
-    if (cfg.length === 'short') b.push('under ~105 min'); else if (cfg.length === 'epic') b.push('2h+');
     if (cfg.era === 'modern') b.push('2000s on'); else if (cfg.era === 'recent') b.push('2015+');
     if (cfg.avoid.length) b.push('no ' + cfg.avoid.join('/').toLowerCase());
     return b.join(' · ');
@@ -983,8 +1081,8 @@
     var turn = quiz.couple ? player(quiz.round % 2 === 0 ? quiz.aId : quiz.bId) : null;
     function show() { showPair(pair, turn, pref); }
     if (quiz.couple && !first) {
-      $('#pass-title').textContent = turn.name + ', your turn!';
-      $('#pass-go').textContent = 'I\'m ' + turn.name + ' — show my picks';
+      $('#pass-title').textContent = turn.name + ', your turn';
+      $('#pass-go').textContent = 'I\'m ' + turn.name + ', show my picks';
       $('#pass-overlay').classList.remove('hidden');
       $('#pass-go').onclick = function () { $('#pass-overlay').classList.add('hidden'); show(); };
     } else show();
@@ -1002,15 +1100,15 @@
     var ip = $('#quiz-inplay');
     if (quiz.moods.length || quiz.picks.length) {
       var n = E.candidatesInPlay(quiz.list, pref, { excludeIds: quiz.used });
-      ip.innerHTML = 'Narrowing down · <b>~' + (n >= 1000 ? Math.round(n / 100) * 100 : n >= 100 ? Math.round(n / 10) * 10 : n).toLocaleString() + '</b> films still in play';
+      ip.innerHTML = 'Narrowing down · <b>~' + (n >= 1000 ? Math.round(n / 100) * 100 : n >= 100 ? Math.round(n / 10) * 10 : n).toLocaleString() + '</b> ' + (quiz.tv ? 'series' : 'films') + ' still in play';
       ip.classList.remove('hidden');
     } else ip.classList.add('hidden');
   }
   function answer(kind, side) {
     if (!quiz || !quiz.pair) return;
     var a = quiz.pair[0], b = quiz.pair[1], arr = quiz.couple && quiz.round % 2 === 1 ? quiz.picksB : quiz.picks;
-    if (kind === 'pick') { var c = side === 'a' ? a : b, x = side === 'a' ? b : a; arr.push({ chosenId: c.id, passedId: x.id, kind: 'pick' }); if (!quiz.couple) logEvent(x.id, 'passed'); }
-    else { arr.push({ chosenId: a.id, passedId: b.id, kind: kind }); if (kind === 'neither' && !quiz.couple) { logEvent(a.id, 'skipped'); logEvent(b.id, 'skipped'); } }
+    if (kind === 'pick') { var c = side === 'a' ? a : b, x = side === 'a' ? b : a; arr.push({ chosenId: c.id, passedId: x.id, kind: 'pick' }); if (!quiz.couple) { logEvent(c.id, 'picked'); logEvent(x.id, 'passed'); } }
+    else { arr.push({ chosenId: a.id, passedId: b.id, kind: kind }); if (kind === 'neither' && !quiz.couple) { logEvent(a.id, 'skipped'); logEvent(b.id, 'skipped'); } else if (kind === 'both' && !quiz.couple) { logEvent(a.id, 'picked'); logEvent(b.id, 'picked'); } }
     quiz.round++; nextRound(false);
   }
   $('#quiz-pair').addEventListener('click', function (ev) {
@@ -1033,10 +1131,13 @@
     var ign = Object.keys(skipped).filter(function (id) { return skipped[id] >= 2; });
     var ex = quiz.used.concat(p.watched || [], disliked, ign, exclude || []);
     if (quiz.couple) {
-      var pb = player(quiz.bId);
-      return E.couplesRecommendations(quiz.full, prefOf(quiz.picks), prefOf(quiz.picksB), { excludeIds: ex.concat(pb.watched || []), limit: limit, filter: quiz.filter });
+      var pb = player(quiz.bId), dB = Object.keys(pb.ratings || {}).filter(function (id) { return pb.ratings[id] === -1; });
+      return E.couplesRecommendations(quiz.full, prefOf(quiz.picks), prefOf(quiz.picksB), {
+        excludeIds: ex.concat(pb.watched || [], dB), limit: limit, filter: quiz.filter,
+        affinityA: affinityFor(p), affinityB: quiz.bId === TEMP_ID ? null : affinityFor(pb)
+      });
     }
-    return E.buildRecommendations(quiz.full, curPref(), { excludeIds: ex, limit: limit, filter: quiz.filter, anchors: E.anchorsFromPicks(toPicks(quiz.picks)) });
+    return E.buildRecommendations(quiz.full, curPref(), { excludeIds: ex, limit: limit, filter: quiz.filter, anchors: E.anchorsFromPicks(toPicks(quiz.picks)), affinity: affinityFor(p) });
   }
   function resultsHTML(recs, offset) {
     var pa = player(quiz.aId), pb = quiz.couple ? player(quiz.bId) : null;
@@ -1057,7 +1158,7 @@
     var pa = player(quiz.aId), pb = quiz.couple ? player(quiz.bId) : null, box = $('#quiz-results');
     box.innerHTML = '<div class="panel"><span class="eyebrow">' + (quiz.couple ? 'For the two of you' : 'Your results') + '</span><h2 style="margin:4px 0 6px">' +
       (quiz.couple ? esc(pa.name) + ' &amp; ' + esc(pb.name) + ', watch this' : (quiz.tv ? 'Your next series' : 'Tonight, you\'re watching')) + '</h2>' +
-      '<p class="muted" style="margin:0">' + (quiz.couple ? 'Every pick clears a minimum fit for both of you, then the fairest overlap wins.' : 'Matched to tonight\'s mood and your ' + quiz.rounds + ' answers') + (quiz.ctxText ? ' · ' + esc(quiz.ctxText) : '') + '.</p></div>' +
+      '<p class="muted" style="margin:0">' + (quiz.couple ? 'Every pick clears a minimum fit for both of you, then the fairest overlap wins.' : 'Matched to tonight\'s mood, your ' + quiz.rounds + ' answers and what you have rated and saved') + (quiz.ctxText ? ' · ' + esc(quiz.ctxText) : '') + '.</p></div>' +
       '<div id="quiz-result-list">' + resultsHTML(recs, 0) + '</div>' +
       '<button class="btn btn-block" id="quiz-more">Show 5 more</button>' +
       '<div class="row" style="margin-top:10px"><button class="btn btn-primary" id="quiz-again" style="flex:1">Play again</button><button class="btn" id="quiz-tweak" style="flex:1">Change mood or filters</button></div>';
@@ -1080,8 +1181,8 @@
   /* ---------- Shuffle ---------- */
   var shuffle = { media: 'movies', mode: 'surprise' };
   var SHUFFLE_MODES = [
-    ['surprise', '🎲 Surprise me'], ['match', '🎯 Best match'], ['unseen', '👀 Not seen yet'], ['outside', '🧭 Outside my taste'],
-    ['hidden', '💎 Hidden gems'], ['critics', '🏆 Critics\' picks'], ['date', '💘 Date night'], ['short', '⏱ Quick watch'], ['throwback', '📼 Throwback'], ['horror', '👻 Scary night']
+    ['surprise', 'Surprise me'], ['match', 'Best match'], ['unseen', 'Not seen yet'], ['outside', 'Outside my taste'],
+    ['hidden', 'Hidden gems'], ['critics', 'Critics\' picks'], ['date', 'Date night'], ['short', 'Quick watch'], ['throwback', 'Throwback'], ['horror', 'Scary night']
   ];
   var SHUFFLE_WHY = {
     surprise: 'A wildcard from across the catalog.', unseen: 'You have not watched or rated this yet.', outside: 'A deliberate step outside your usual taste.',
@@ -1132,7 +1233,7 @@
     });
     if (!pool.length) { toast('Nothing fits those filters — try another mode or genre.'); return; }
     var rng = Math.random, mt = {};
-    if (taste) pool.forEach(function (m) { mt[m.id] = E.matchPercent(p.taste, m) / 100; });
+    if (taste) pool.forEach(function (m) { mt[m.id] = personalMatch(p, m) / 100; });
     var picks = weightedPick(pool, function (m) {
       var q = Math.pow(Math.max(0.05, E.quality(m)), 2);
       if (mode === 'match' && taste) return q * Math.pow(mt[m.id], 6) * 50;
@@ -1152,9 +1253,11 @@
   }
   $('#shuffle-go').addEventListener('click', doShuffle);
 
-  /* ---------- Top 20 (personalised, customisable) ---------- */
+  /* ---------- Top 20 (personalised, canon, or hand-built) ---------- */
   var t20media = lsGet(UI_KEY, {}).t20media || 'movies';
+  var t20FiltersOpen = false;
   var T20_GENRES = ['Action', 'Comedy', 'Drama', 'Thriller', 'Sci-Fi', 'Horror', 'Crime', 'Romance', 'Fantasy', 'Animation', 'Mystery', 'Documentary'];
+  var T20_MAX = 20;
   function top20Items(p, media) {
     var t = p.top20, list = listFor(media), qp = p.quizProfile || {};
     var canon = t.mode === 'canon';
@@ -1164,45 +1267,242 @@
       taste: canon || !hasTaste(p) ? null : p.taste,
       genres: canon ? [] : (qp.genres || []), includeGenres: t.genres, era: t.era,
       avoid: canon ? [] : (qp.avoid || []), excludeIds: t.hidden, rated: p.ratings, watched: p.watched,
-      hideWatched: t.hideWatched, byId: byIdMap, limit: 20
+      hideWatched: t.hideWatched, byId: byIdMap, limit: 20, affinity: canon ? null : affinityFor(p)
     });
   }
+  function mineItems(p, media) {
+    var map = media === 'shows' ? showById : byId, withMatch = hasTaste(p);
+    return p.top20.mine[media].map(function (id) { return map[id]; }).filter(Boolean).map(function (m) {
+      return { movie: m, match: withMatch ? personalMatch(p, m) : null, why: '' };
+    });
+  }
+
+  /* --- editing the hand-built list. Every change teaches the engine. --- */
+  function addMine(p, id, media, auto) {
+    var t = p.top20, list = t.mine[media];
+    if (list.indexOf(id) >= 0 || list.length >= T20_MAX) return false;
+    list.push(id);
+    if (auto) t.auto.push(id); else applySignal(p, id, 'top20', true);
+    logEvent(id, 'top20-add');
+    save();
+    return true;
+  }
+  function dropSignal(p, id) {
+    var t = p.top20, ai = t.auto.indexOf(id);
+    if (ai >= 0) t.auto.splice(ai, 1); else applySignal(p, id, 'top20', false);
+  }
+  function removeMine(p, id, media) {
+    var list = p.top20.mine[media], i = list.indexOf(id);
+    if (i < 0) return;
+    list.splice(i, 1); dropSignal(p, id); save();
+  }
+  function replaceMine(p, index, newId, media) {
+    var list = p.top20.mine[media], old = list[index];
+    if (old == null || list.indexOf(newId) >= 0) return false;
+    list[index] = newId; dropSignal(p, old); applySignal(p, newId, 'top20', true);
+    logEvent(newId, 'top20-add'); save();
+    return true;
+  }
+  function moveMine(p, index, dir, media) {
+    var list = p.top20.mine[media], j = index + dir;
+    if (j < 0 || j >= list.length) return;
+    var t = list[index]; list[index] = list[j]; list[j] = t;
+    /* placing a title by hand confirms it: auto-filled titles start counting as taste once moved */
+    [list[index], list[j]].forEach(function (id) { var ai = p.top20.auto.indexOf(id); if (ai >= 0) { p.top20.auto.splice(ai, 1); applySignal(p, id, 'top20', true); } });
+    save();
+  }
+  function toggleMine(id) {
+    var p = me(), media = showById[id] ? 'shows' : 'movies', list = p.top20.mine[media];
+    if (list.indexOf(id) >= 0) { removeMine(p, id, media); toast('Removed from your Top 20'); return false; }
+    if (list.length >= T20_MAX) { openPicker({ media: media, mode: 'slot', forId: id }); return false; }
+    addMine(p, id, media);
+    toast('Added to your Top 20 (' + list.length + ' of ' + T20_MAX + ')');
+    return true;
+  }
+  function fillMine() {
+    var p = me(), media = t20media, list = p.top20.mine[media], room = T20_MAX - list.length;
+    if (room <= 0) return;
+    var qp = p.quizProfile || {}, lst = listFor(media);
+    E.calibrate(lst);
+    var recs = E.personalTop(lst, {
+      taste: hasTaste(p) ? p.taste : null, genres: qp.genres || [], avoid: qp.avoid || [],
+      excludeIds: p.top20.hidden.concat(list), rated: p.ratings, watched: p.watched,
+      byId: media === 'shows' ? showById : byId, limit: room, affinity: affinityFor(p)
+    });
+    recs.forEach(function (r) { addMine(p, r.movie.id, media, true); });
+    toast('Added ' + recs.length + ' suggestions. Swap or reorder anything.');
+  }
+
+  function t20End(inner) { return '<span class="lr-end">' + inner + '</span>'; }
+  function t20Row(r, i, endHTML, note) {
+    var m = r.movie;
+    return '<div class="list-row" data-open="' + m.id + '" role="button" tabindex="0"><span class="rank">' + (i + 1) + '</span><span class="mini-cover">' + coverHTML(m) + '</span>' +
+      '<span class="lr-main"><div class="lr-title">' + esc(m.title) + '</div><div class="lr-sub">' + esc(metaLine(yearText(m), (m.genres || []).slice(0, 2).join(', '), R.badge(m) ? 'Rated ' + R.badge(m) : '')) + '</div>' +
+      (note ? '<div class="lr-note">' + esc(note) + '</div>' : '') + '</span>' + endHTML + '</div>';
+  }
   function renderTop20() {
-    var p = me(), t = p.top20, root = $('#top20-root'), canon = t.mode === 'canon';
-    var items = top20Items(p, t20media), needQuiz = !canon && !p.quizProfile && !hasTaste(p);
-    var h = '<div class="page-head"><span class="eyebrow">' + (canon ? 'Critically loved' : 'Built for ' + esc(p.name)) + '</span><h1>Your Top 20</h1>' +
-      '<p>' + (canon ? 'The best-regarded titles in the catalog, with your filters applied.' : 'Ranked by how well each title fits your taste, your favorite genres and how well it\'s rated. It updates as you rate and watch.') + '</p></div>';
-    if (needQuiz) h += '<div class="cta-banner"><span><b>Make it yours</b><span>Take the 1-minute personality quiz and your Top 20 builds itself.</span></span><button class="btn btn-primary" id="t20-take">Take the quiz</button></div>';
-    h += '<div class="toolbar">' +
-      '<div class="seg-group">' + [['foryou', 'For you'], ['canon', 'Canon']].map(function (o) { return '<button class="seg' + (t.mode === o[0] ? ' selected' : '') + '" data-t20mode="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="seg-group">' + [['movies', 'Movies'], ['shows', 'TV']].map(function (o) { return '<button class="seg' + (t20media === o[0] ? ' selected' : '') + '" data-t20media="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
-    h += '<div class="chips wrap" style="margin:12px 0 6px" role="group" aria-label="Limit to genres">' + T20_GENRES.map(function (g) { return '<button class="chip' + (t.genres.indexOf(g) >= 0 ? ' active' : '') + '" data-t20genre="' + g + '">' + g + '</button>'; }).join('') + '</div>';
-    h += '<div class="toolbar" style="margin-bottom:14px"><div class="seg-group">' + [['', 'Any era'], ['modern', '2000+'], ['recent', '2015+'], ['classic', 'Pre-2000']].map(function (o) { return '<button class="seg' + (t.era === o[0] ? ' selected' : '') + '" data-t20era="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>' +
-      '<label class="switch"><input type="checkbox" id="t20-hide"' + (t.hideWatched ? ' checked' : '') + '> <span>Hide watched</span></label></div>';
-    h += items.length ? '<div class="list-stack">' + items.map(function (r, i) {
-      var m = r.movie;
-      return '<div class="list-row" data-open="' + m.id + '" role="button" tabindex="0"><span class="rank">' + (i + 1) + '</span><span class="mini-cover">' + coverHTML(m) + '</span>' +
-        '<span><div class="lr-title">' + esc(m.title) + '</div><div class="lr-sub">' + esc(metaLine(yearText(m), (m.genres || []).slice(0, 2).join(', '), R.badge(m) ? '★ ' + R.badge(m) : '')) + '</div>' +
-        '<div class="lr-note">' + esc(canon ? m.description : r.why) + '</div></span>' +
-        '<span class="lr-end">' + (canon || needQuiz ? '' : '<span class="match-pill sm">' + r.match + '%</span>') + '<button class="x-btn" data-t20hide="' + m.id + '" title="Not interested — remove" aria-label="Remove from my Top 20">✕</button></span></div>';
-    }).join('') + '</div>' : '<div class="empty"><b>Nothing matches those filters</b>Loosen the genre or era filters.</div>';
-    if (t.hidden.length) h += '<p class="fineprint" style="text-align:center;margin-top:14px">' + t.hidden.length + ' hidden · <button class="btn btn-ghost btn-sm" id="t20-restore">Restore all</button></p>';
+    var p = me(), t = p.top20, root = $('#top20-root'), mode = t.mode, canon = mode === 'canon', mineMode = mode === 'mine';
+    var needQuiz = !canon && !mineMode && !p.quizProfile && !hasTaste(p);
+    var mineIds = t.mine[t20media], nFilters = t.genres.length + (t.era ? 1 : 0) + (t.hideWatched ? 1 : 0);
+    var sub = canon ? 'Critically loved' : mineMode ? mineIds.length + ' of ' + T20_MAX + ' chosen' : 'Built for ' + esc(p.name);
+    var h = '<div class="t20-top"><div class="t20-title"><h1>Top 20</h1><span class="t20-sub">' + sub + '</span></div>' +
+      (mineMode
+        ? '<button class="btn btn-primary btn-sm" id="t20-addopen"' + (mineIds.length >= T20_MAX ? ' disabled' : '') + '>' + ic(ICON.plus, 15) + 'Add title</button>'
+        : '<button class="btn btn-sm t20-filter' + (t20FiltersOpen ? ' open' : '') + '" id="t20-filters" aria-expanded="' + t20FiltersOpen + '">' + ic(ICON.filter, 15) + 'Filters' + (nFilters ? '<span class="count-dot">' + nFilters + '</span>' : '') + '</button>') + '</div>';
+    h += '<div class="t20-bar"><div class="seg-group t20-modes">' + [['foryou', 'For you'], ['canon', 'Canon'], ['mine', 'My list']].map(function (o) { return '<button class="seg' + (mode === o[0] ? ' selected' : '') + '" data-t20mode="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="seg-group t20-media">' + [['movies', 'Movies'], ['shows', 'TV']].map(function (o) { return '<button class="seg' + (t20media === o[0] ? ' selected' : '') + '" data-t20media="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
+    if (!mineMode && t20FiltersOpen) {
+      h += '<div class="t20-filters-panel"><div class="chips wrap" role="group" aria-label="Limit to genres">' + T20_GENRES.map(function (g) { return '<button class="chip' + (t.genres.indexOf(g) >= 0 ? ' active' : '') + '" data-t20genre="' + g + '">' + g + '</button>'; }).join('') + '</div>' +
+        '<div class="t20-filter-row"><div class="seg-group">' + [['', 'Any'], ['modern', '2000+'], ['recent', '2015+'], ['classic', 'Pre‑2000']].map(function (o) { return '<button class="seg' + (t.era === o[0] ? ' selected' : '') + '" data-t20era="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+        '<label class="switch"><input type="checkbox" id="t20-hide"' + (t.hideWatched ? ' checked' : '') + '> <span>Hide watched</span></label></div></div>';
+    }
+    if (needQuiz) h += '<p class="t20-note">Take the one-minute personality quiz to tune this list. <button class="link-btn" id="t20-take">Take the quiz</button></p>';
+
+    if (mineMode) {
+      var items = mineItems(p, t20media);
+      if (!items.length) {
+        h += '<div class="empty t20-empty"><b>Build your own Top 20</b>Add titles one at a time, or start from our suggestions and swap anything out.' +
+          '<div class="row" style="justify-content:center;margin-top:14px"><button class="btn btn-primary" id="t20-addopen2">Add a title</button><button class="btn" id="t20-fill">Start from suggestions</button></div></div>';
+      } else {
+        h += '<div class="list-stack">' + items.map(function (r, i) {
+          var m = r.movie, last = i === items.length - 1;
+          return t20Row(r, i, t20End((r.match != null ? '<span class="match-pill sm">' + r.match + '%</span>' : '') +
+            '<span class="lr-tools">' +
+            '<button class="x-btn" data-t20up="' + i + '" title="Move up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>' + ic(ICON.chevUp, 15) + '</button>' +
+            '<button class="x-btn" data-t20down="' + i + '" title="Move down" aria-label="Move down"' + (last ? ' disabled' : '') + '>' + ic(ICON.chevDown, 15) + '</button>' +
+            '<button class="x-btn" data-t20swap="' + i + '" title="Replace" aria-label="Replace this title">' + ic(ICON.swap, 15) + '</button>' +
+            '<button class="x-btn" data-t20rm="' + m.id + '" title="Remove" aria-label="Remove from my Top 20">' + ic(ICON.x, 15) + '</button></span>'), '');
+        }).join('') + '</div>';
+        if (mineIds.length < T20_MAX) {
+          h += '<div class="t20-more"><button class="btn btn-block" id="t20-addopen2">' + ic(ICON.plus, 16) + 'Add a title <span class="muted">· ' + (T20_MAX - mineIds.length) + ' open</span></button>' +
+            '<button class="btn btn-ghost btn-block" id="t20-fill">Fill the rest with suggestions</button></div>';
+        }
+      }
+    } else {
+      var auto = top20Items(p, t20media), inMine = t.mine[t20media];
+      h += auto.length ? '<div class="list-stack">' + auto.map(function (r, i) {
+        var m = r.movie, on = inMine.indexOf(m.id) >= 0;
+        return t20Row(r, i, t20End((canon || needQuiz ? '' : '<span class="match-pill sm">' + r.match + '%</span>') +
+          '<span class="lr-tools one">' +
+          '<button class="x-btn' + (on ? ' on' : '') + '" data-t20add="' + m.id + '" title="' + (on ? 'In your list' : 'Add to my list') + '" aria-label="Add to my Top 20">' + ic(on ? ICON.check : ICON.plus, 15) + '</button>' +
+          '<button class="x-btn" data-t20hide="' + m.id + '" title="Not interested" aria-label="Remove from this list">' + ic(ICON.x, 15) + '</button></span>'), canon ? m.description : (r.why === 'A consensus favourite.' ? '' : r.why));
+      }).join('') + '</div>' : '<div class="empty"><b>Nothing matches those filters</b>Loosen the genre or era filters.</div>';
+      if (t.hidden.length) h += '<p class="fineprint" style="text-align:center;margin-top:14px">' + t.hidden.length + ' hidden · <button class="link-btn" id="t20-restore">Restore all</button></p>';
+    }
     root.innerHTML = h;
     var tk = $('#t20-take'); if (tk) tk.onclick = function () { openPersonalityQuiz(); };
   }
+  function rerenderTop20() { var y = window.scrollY; renderTop20(); window.scrollTo(0, y); }
   $('#top20-root').addEventListener('click', function (ev) {
-    var p = me(), t = p.top20, b;
-    if ((b = ev.target.closest('[data-t20hide]'))) { ev.stopPropagation(); t.hidden.push(b.dataset.t20hide); save(); renderTop20(); toast('Removed — the next best title moved up'); return; }
+    var p = me(), t = p.top20, b, media = t20media;
+    function stop() { ev.stopPropagation(); ev.preventDefault(); }
+    if ((b = ev.target.closest('[data-t20hide]'))) { stop(); t.hidden.push(b.dataset.t20hide); save(); rerenderTop20(); toast('Removed. The next best title moved up.'); return; }
+    if ((b = ev.target.closest('[data-t20add]'))) { stop(); toggleMine(b.dataset.t20add); rerenderTop20(); return; }
+    if ((b = ev.target.closest('[data-t20rm]'))) { stop(); removeMine(p, b.dataset.t20rm, media); rerenderTop20(); toast('Removed from your Top 20'); return; }
+    if ((b = ev.target.closest('[data-t20up]'))) { stop(); moveMine(p, Number(b.dataset.t20up), -1, media); rerenderTop20(); return; }
+    if ((b = ev.target.closest('[data-t20down]'))) { stop(); moveMine(p, Number(b.dataset.t20down), 1, media); rerenderTop20(); return; }
+    if ((b = ev.target.closest('[data-t20swap]'))) { stop(); openPicker({ media: media, mode: 'replace', index: Number(b.dataset.t20swap) }); return; }
+    if (ev.target.closest('#t20-addopen, #t20-addopen2')) { openPicker({ media: media, mode: 'add' }); return; }
+    if (ev.target.closest('#t20-fill')) { fillMine(); rerenderTop20(); return; }
+    if (ev.target.closest('#t20-filters')) { t20FiltersOpen = !t20FiltersOpen; rerenderTop20(); return; }
     if ((b = ev.target.closest('[data-t20mode]'))) t.mode = b.dataset.t20mode;
     else if ((b = ev.target.closest('[data-t20media]'))) { t20media = b.dataset.t20media; var ui = lsGet(UI_KEY, {}); ui.t20media = t20media; lsSet(UI_KEY, ui); }
     else if ((b = ev.target.closest('[data-t20genre]'))) { var i = t.genres.indexOf(b.dataset.t20genre); if (i >= 0) t.genres.splice(i, 1); else t.genres.push(b.dataset.t20genre); }
     else if ((b = ev.target.closest('[data-t20era]'))) t.era = b.dataset.t20era;
     else if (ev.target.closest('#t20-restore')) t.hidden = [];
     else return;
-    save(); renderTop20();
+    save(); rerenderTop20();
   });
-  $('#top20-root').addEventListener('change', function (ev) { if (ev.target.id === 't20-hide') { me().top20.hideWatched = ev.target.checked; save(); renderTop20(); } });
+  $('#top20-root').addEventListener('change', function (ev) { if (ev.target.id === 't20-hide') { me().top20.hideWatched = ev.target.checked; save(); rerenderTop20(); } });
   $('#top20-root').addEventListener('keydown', function (ev) { if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.classList.contains('list-row')) { ev.preventDefault(); openDetail(ev.target.dataset.open); } });
+
+  /* --- title picker: add to / replace in the hand-built list --- */
+  var picker = null;
+  function closePicker() {
+    if (!picker) return;
+    picker.ov.remove(); picker = null;
+    if ($('#detail-overlay').classList.contains('hidden') && !$('#drawer').classList.contains('open')) document.body.classList.remove('locked');
+    if (currentView === 'top20') rerenderTop20();
+    var df = $('#detail-fav'); if (df && !$('#detail-overlay').classList.contains('hidden')) { var dt = $('#detail-t20'); if (dt) { var did = ($('#detail-sheet').dataset.id); if (did) refreshDetail(did); } }
+  }
+  function pickerRows(items, label, btn) {
+    return (label ? '<div class="picker-label">' + label + '</div>' : '') + items.map(function (it) {
+      var m = it.movie || it;
+      return '<div class="pick-row"><span class="mini-cover">' + coverHTML(m) + '</span><span class="pick-main"><span class="pick-title">' + esc(m.title) + '</span><span class="pick-sub">' + esc(metaLine(yearText(m), (m.genres || []).slice(0, 2).join(', '))) + '</span></span>' + btn(m) + '</div>';
+    }).join('');
+  }
+  function pickerSearch(media, q) {
+    var list = listFor(media), toks = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    var hits = list.filter(function (m) { var h = hay(m); return toks.every(function (t) { return h.indexOf(t) >= 0; }); });
+    var ql = q.toLowerCase().trim();
+    hits.sort(function (a, b) {
+      var sa = a.title.toLowerCase().indexOf(ql) === 0 ? 1 : 0, sb = b.title.toLowerCase().indexOf(ql) === 0 ? 1 : 0;
+      return (sb - sa) || (E.quality(b) - E.quality(a));
+    });
+    return hits.slice(0, 30);
+  }
+  function drawPickerResults() {
+    if (!picker) return;
+    var p = me(), o = picker.opts, media = o.media, list = p.top20.mine[media], map = media === 'shows' ? showById : byId, box = $('#t20-results'), cnt = $('#t20-count');
+    if (cnt) cnt.textContent = list.length + ' of ' + T20_MAX + ' in your list';
+    if (o.mode === 'slot') {
+      var nm = anyById(o.forId);
+      var rows = list.map(function (id, i) { return { movie: map[id], i: i }; }).filter(function (r) { return r.movie; });
+      box.innerHTML = '<div class="picker-note">Your list is full. Choose a title to replace with <b>' + esc(nm ? nm.title : 'this title') + '</b>.</div>' +
+        rows.map(function (r) {
+          var m = r.movie;
+          return '<div class="pick-row"><span class="rank sm">' + (r.i + 1) + '</span><span class="mini-cover">' + coverHTML(m) + '</span><span class="pick-main"><span class="pick-title">' + esc(m.title) + '</span><span class="pick-sub">' + esc(metaLine(yearText(m), (m.genres || []).slice(0, 2).join(', '))) + '</span></span><button class="btn btn-sm" data-pslot="' + r.i + '">Replace</button></div>';
+        }).join('');
+      return;
+    }
+    var q = ($('#t20-q') || {}).value || '', items, label = '';
+    if (q.trim()) { items = pickerSearch(media, q); if (!items.length) { box.innerHTML = '<div class="empty"><b>No matches</b>Try a different title, actor or keyword.</div>'; return; } }
+    else {
+      var qp = p.quizProfile || {}, lst = listFor(media);
+      E.calibrate(lst);
+      items = E.personalTop(lst, {
+        taste: hasTaste(p) ? p.taste : null, genres: qp.genres || [], avoid: qp.avoid || [], excludeIds: p.top20.hidden.concat(list), rated: p.ratings,
+        watched: p.watched, byId: map, limit: 20, affinity: affinityFor(p)
+      }).map(function (r) { return r.movie; });
+      label = 'Suggested for you';
+    }
+    box.innerHTML = pickerRows(items, label, function (m) {
+      var inList = list.indexOf(m.id) >= 0;
+      if (inList) return '<span class="pick-done">' + ic(ICON.check, 15) + 'In list</span>';
+      if (o.mode === 'replace') return '<button class="btn btn-sm btn-primary" data-ppick="' + m.id + '">Replace</button>';
+      return '<button class="btn btn-sm btn-primary" data-ppick="' + m.id + '">' + (list.length >= T20_MAX ? 'Replace…' : 'Add') + '</button>';
+    });
+  }
+  function openPicker(o) {
+    closePicker();
+    var p = me(), media = o.media, list = p.top20.mine[media], tv = media === 'shows';
+    var title = o.mode === 'replace' ? 'Replace a title' : o.mode === 'slot' ? 'Replace a title' : 'Add to your Top 20';
+    var ov = el('<div class="overlay center t20-picker" role="dialog" aria-modal="true" aria-label="' + title + '"><div class="welcome-card picker-card"></div></div>');
+    document.body.appendChild(ov); document.body.classList.add('locked');
+    picker = { ov: ov, opts: o };
+    var box = ov.firstElementChild;
+    var oldT = o.mode === 'replace' && list[o.index] ? (anyById(list[o.index]) || {}).title : '';
+    box.innerHTML = '<div class="picker-head"><div><div class="eyebrow">' + (tv ? 'TV shows' : 'Movies') + '</div><h2>' + title + '</h2>' + (oldT ? '<p class="muted picker-sub">Swapping out ' + esc(oldT) + '</p>' : '') + '</div>' +
+      '<button class="icon-btn" data-pclose aria-label="Close">' + ic(ICON.x, 18) + '</button></div>' +
+      (o.mode === 'slot' ? '' : '<label class="search picker-search">' + ic(ICON.search, 18) + '<input id="t20-q" type="search" placeholder="' + (tv ? 'Search TV shows' : 'Search movies') + '" autocomplete="off" aria-label="Search titles"></label>') +
+      '<div id="t20-results" class="picker-results"></div>' +
+      '<div class="picker-foot"><span id="t20-count" class="muted"></span><button class="btn btn-primary btn-sm" data-pclose>Done</button></div>';
+    drawPickerResults();
+    var qi = $('#t20-q'), st;
+    if (qi) { qi.addEventListener('input', function () { clearTimeout(st); st = setTimeout(drawPickerResults, 120); }); setTimeout(function () { try { qi.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 60); }
+    ov.addEventListener('click', function (ev) {
+      if (ev.target === ov || ev.target.closest('[data-pclose]')) { closePicker(); return; }
+      var pk = ev.target.closest('[data-ppick]'), sl = ev.target.closest('[data-pslot]'), pp = me(), op = picker && picker.opts;
+      if (pk && op) {
+        var id = pk.dataset.ppick, lst = pp.top20.mine[op.media];
+        if (op.mode === 'replace') { if (replaceMine(pp, op.index, id, op.media)) { toast('Replaced'); closePicker(); } return; }
+        if (lst.length >= T20_MAX) { picker.opts = { media: op.media, mode: 'slot', forId: id }; ov.querySelector('.picker-search') && ov.querySelector('.picker-search').remove(); drawPickerResults(); return; }
+        addMine(pp, id, op.media); drawPickerResults();
+      } else if (sl && op) {
+        if (replaceMine(pp, Number(sl.dataset.pslot), op.forId, op.media)) { toast('Replaced'); closePicker(); }
+      }
+    });
+  }
 
   /* ---------- Personality quiz (4 steps, seeds taste + Top 20) ---------- */
   function openPersonalityQuiz() {
@@ -1249,10 +1549,16 @@
 
   /* ---------- Account ---------- */
   var accOpenFold = false;
+  var accOpen = { look: false, theme: false, dna: false, ratings: false, share: false };
+  var avSet = 0;
   function miniGrid(ids, emptyMsg) {
     var items = ids.map(anyById).filter(Boolean);
     return items.length ? '<div class="mini-grid">' + items.slice(-12).reverse().map(function (m) { return '<button class="card" data-open="' + m.id + '">' + coverHTML(m) + '<div class="card-body"><div class="card-title">' + esc(m.title) + '</div></div></button>'; }).join('') + '</div>' : '<p class="muted">' + emptyMsg + '</p>';
   }
+  function pzFold(key, title, meta, lead, body) {
+    return '<details class="pz-fold" data-pz="' + key + '"' + (accOpen[key] ? ' open' : '') + '><summary>' + (lead || '') + '<span class="pz-t">' + title + '</span><span class="pz-m">' + meta + '</span>' + ic(ICON.chevDown, 18) + '</summary><div class="pz-body">' + body + '</div></details>';
+  }
+  function rerenderAccount() { var y = window.scrollY; renderAccount(); window.scrollTo(0, y); }
   function renderAccount() {
     var p = me(), root = $('#account-root'), signed = !!state.activeId;
     if (!signed) {
@@ -1262,55 +1568,60 @@
     }
     var th = themeSettings(p), rt = resolveTheme(th), qp = p.quizProfile;
     var rated = Object.keys(p.ratings).length;
-    var h = '<div class="panel"><div class="profile-head">' + avatarHTML(p, 'lg') + '<div style="flex:1;min-width:160px"><h2 style="margin:0">' + esc(p.name) + '</h2><p class="muted" style="margin:2px 0 0">' + esc(p.guest ? 'Guest · data stays on this device' : (p.email || '')) + '</p></div></div>' +
-      '<div class="stat-row"><div class="stat"><b>' + p.watched.length + '</b><span>WATCHED</span></div><div class="stat"><b>' + rated + '</b><span>RATED</span></div><div class="stat"><b>' + p.history.length + '</b><span>QUIZZES</span></div></div></div>';
+    var curTheme = THEMES.filter(function (t) { return t.id === rt.id; })[0];
+    var h = '<div class="panel acc-head-card"><div class="profile-head">' + avatarHTML(p, 'lg') + '<div style="flex:1;min-width:140px"><h2 style="margin:0">' + esc(p.name) + '</h2><p class="muted" style="margin:2px 0 0">' + esc(p.guest ? 'Guest · data stays on this device' : (p.email || '')) + '</p></div></div>' +
+      '<div class="stat-row"><div class="stat"><b>' + p.watched.length + '</b><span>Watched</span></div><div class="stat"><b>' + rated + '</b><span>Rated</span></div><div class="stat"><b>' + p.history.length + '</b><span>Quizzes</span></div></div></div>';
 
-    /* profile + look */
-    h += '<div class="panel"><div class="panel-title">Profile &amp; look</div>' +
-      '<div class="field"><label class="label" for="acc-name">Display name</label><input id="acc-name" class="input" maxlength="24" value="' + esc(p.name) + '"></div>' +
-      '<div class="label" style="margin-top:16px">Avatar</div><div class="seg-group" style="margin-bottom:10px">' + [['emoji', 'Emoji'], ['mono', 'Monogram']].map(function (o) { return '<button class="seg' + (p.style === o[0] ? ' selected' : '') + '" data-av-style="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>' +
-      (p.style === 'mono' ? '' : EMOJI_SETS.map(function (s) { return '<div class="label" style="margin:10px 0 6px;font-weight:500">' + s.label + '</div><div class="avatar-grid">' + s.list.map(function (e) { return '<button class="emoji-btn' + (p.emoji === e ? ' selected' : '') + '" data-av-emoji="' + e + '" aria-label="' + e + '">' + e + '</button>'; }).join('') + '</div>'; }).join('')) +
-      '<div class="label" style="margin-top:16px">Avatar colour</div><div class="swatch-row">' +
+    /* profile + avatar */
+    var look = '<div class="field"><label class="label" for="acc-name">Display name</label><input id="acc-name" class="input" maxlength="24" value="' + esc(p.name) + '"></div>' +
+      '<div class="pz-line"><span class="label">Avatar</span><div class="seg-group">' + [['emoji', 'Emoji'], ['mono', 'Monogram']].map(function (o) { return '<button class="seg' + ((p.style === o[0] || (o[0] === 'mono' && !p.emoji)) ? ' selected' : '') + '" data-av-style="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>' +
+      (p.style === 'mono' ? '' : '<div class="seg-group pz-sets">' + EMOJI_SETS.map(function (st, i) { return '<button class="seg' + (avSet === i ? ' selected' : '') + '" data-av-set="' + i + '">' + st.label + '</button>'; }).join('') + '</div>' +
+        '<div class="avatar-grid">' + EMOJI_SETS[avSet].list.map(function (e) { return '<button class="emoji-btn' + (p.emoji === e ? ' selected' : '') + '" data-av-emoji="' + e + '" aria-label="' + e + '">' + e + '</button>'; }).join('') + '</div>') +
+      '<div class="pz-line"><span class="label">Colour</span><div class="swatch-row">' +
       Object.keys(AV_BGS).map(function (k) { return '<button class="swatch' + (p.bg === k ? ' selected' : '') + '" style="background:' + AV_BGS[k] + '" data-av-bg="' + k + '" aria-label="' + k + ' gradient"></button>'; }).join('') +
-      COLORS.map(function (c) { return '<button class="swatch' + (!p.bg && p.color === c ? ' selected' : '') + '" style="background:' + c + '" data-av-color="' + c + '" aria-label="Solid ' + c + '"></button>'; }).join('') + '</div>' +
-      '<div class="label" style="margin-top:16px">Frame</div><div class="seg-group">' + [['none', 'None'], ['ring', 'Ring'], ['double', 'Double'], ['glow', 'Glow']].map(function (o) { return '<button class="seg' + (p.frame === o[0] ? ' selected' : '') + '" data-av-frame="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
+      COLORS.map(function (c) { return '<button class="swatch' + (!p.bg && p.color === c ? ' selected' : '') + '" style="background:' + c + '" data-av-color="' + c + '" aria-label="Solid ' + c + '"></button>'; }).join('') + '</div></div>' +
+      '<div class="pz-line"><span class="label">Frame</span><div class="seg-group">' + [['none', 'None'], ['ring', 'Ring'], ['double', 'Double'], ['glow', 'Glow']].map(function (o) { return '<button class="seg' + (p.frame === o[0] ? ' selected' : '') + '" data-av-frame="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
 
     /* theme */
-    h += '<div class="panel"><div class="panel-title">Colours &amp; theme</div><p class="muted" style="margin-top:0">Changes the whole app instantly and is remembered for your account.</p>' +
-      '<div class="theme-grid">' + THEMES.map(function (t) { var v = themeVars(t); return '<button class="theme-swatch' + (th.preset === t.id || (!th.preset && t.id === 'gold') ? ' selected' : '') + '" data-theme="' + t.id + '"><div class="prev" style="background:' + v['--bg'] + '"><i style="background:' + v['--accent'] + '"></i><i style="background:' + v['--surface2'] + '"></i><i style="background:' + v['--surface3'] + '"></i></div><span>' + t.name + '</span></button>'; }).join('') + '</div>' +
-      '<div class="row" style="margin-top:14px;align-items:center"><label class="label" for="acc-accent" style="margin:0">Custom accent</label><input type="color" id="acc-accent" value="' + rt.accent + '" style="width:54px;height:40px;padding:2px">' +
-      '<div class="seg-group" style="margin-left:auto">' + [['dark', 'Dark'], ['light', 'Light']].map(function (o) { return '<button class="seg' + (rt.mode === o[0] ? ' selected' : '') + '" data-mode="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div></div>';
+    var theme = '<div class="theme-grid">' + THEMES.map(function (t) { var v = themeVars(t); return '<button class="theme-swatch' + (th.preset === t.id || (!th.preset && t.id === 'gold') ? ' selected' : '') + '" data-theme="' + t.id + '"><div class="prev" style="background:' + v['--bg'] + '"><i style="background:' + v['--accent'] + '"></i><i style="background:' + v['--surface2'] + '"></i><i style="background:' + v['--surface3'] + '"></i></div><span>' + t.name + '</span></button>'; }).join('') + '</div>' +
+      '<div class="pz-line"><label class="label" for="acc-accent">Custom accent</label><input type="color" id="acc-accent" value="' + rt.accent + '" class="pz-color">' +
+      '<div class="seg-group" style="margin-left:auto">' + [['dark', 'Dark'], ['light', 'Light']].map(function (o) { return '<button class="seg' + (rt.mode === o[0] ? ' selected' : '') + '" data-mode="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
 
     /* personality */
-    h += '<div class="panel"><div class="panel-title">Personality quiz</div>' +
-      (qp ? '<p class="muted" style="margin-top:0">Your Entertainment DNA is saved. It shapes your Top 20 and your recommendations.</p><div class="chips wrap">' + (qp.genres || []).map(function (g) { return '<span class="chip soft active">' + esc(g) + '</span>'; }).join('') + (qp.mood ? '<span class="chip soft">' + esc(qp.mood) + '</span>' : '') + '</div>' : '<p class="muted" style="margin-top:0">One minute, four questions. It seeds your taste profile and automatically builds your Top 20.</p>') +
-      '<button class="btn btn-primary btn-block" id="acc-pq" style="margin-top:12px">' + (qp ? 'Retake the personality quiz' : 'Take the personality quiz') + '</button></div>';
+    var dna = (qp ? '<p class="muted" style="margin:0 0 10px">Your Entertainment DNA shapes your Top 20 and recommendations, and keeps adapting as you rate and watch.</p><div class="chips wrap">' + (qp.genres || []).map(function (g) { return '<span class="chip soft active">' + esc(g) + '</span>'; }).join('') + (qp.mood ? '<span class="chip soft">' + esc(qp.mood) + '</span>' : '') + '</div>' : '<p class="muted" style="margin:0">One minute, four questions. It seeds your taste profile and builds your Top 20. After that, every rating and save keeps tuning it.</p>') +
+      '<button class="btn btn-primary btn-block" id="acc-pq" style="margin-top:12px">' + (qp ? 'Retake the personality quiz' : 'Take the personality quiz') + '</button>';
 
     /* ratings */
-    h += '<div class="panel"><div class="panel-title">Ratings &amp; reviews</div><p class="muted" style="margin-top:0">Every title already shows its TMDB rating. Paste a free <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noopener">OMDb key</a> to add live <b>IMDb</b>, <b>Rotten Tomatoes</b> and <b>Metacritic</b> scores (cached on this device).</p>' +
-      '<div class="row"><input id="acc-omdb" class="input" style="flex:1;min-width:180px" placeholder="OMDb API key" autocomplete="off" value="' + esc(R.getKey()) + '"><button class="btn" id="acc-omdb-save">Save</button></div></div>';
+    var ratings = '<p class="muted" style="margin:0 0 10px">Every title shows its TMDB rating. Paste a free <a href="https://www.omdbapi.com/apikey.aspx" target="_blank" rel="noopener">OMDb key</a> to add live IMDb, Rotten Tomatoes and Metacritic scores (cached on this device).</p>' +
+      '<div class="row"><input id="acc-omdb" class="input" style="flex:1;min-width:180px" placeholder="OMDb API key" autocomplete="off" value="' + esc(R.getKey()) + '"><button class="btn" id="acc-omdb-save">Save</button></div>';
 
-    /* share */
-    h += '<div class="panel"><div class="panel-title">Share Movie Night</div>' + shareHTML() + '</div>';
+    h += '<div class="pz">' +
+      pzFold('look', 'Profile &amp; avatar', esc(p.name), avatarHTML(p), look) +
+      pzFold('theme', 'Colours &amp; theme', esc((curTheme ? curTheme.name : 'Gold') + ' · ' + (rt.mode === 'light' ? 'Light' : 'Dark')), '<span class="pz-dot" style="background:' + esc(rt.accent) + '"></span>', theme) +
+      pzFold('dna', 'Personality quiz', qp ? 'Saved' : 'Not taken', '', dna) +
+      pzFold('ratings', 'Ratings &amp; reviews', R.hasKey() ? 'Key saved' : 'Optional', '', ratings) +
+      pzFold('share', 'Share Movie Night', 'Copy link', '', shareHTML()) +
+      '</div>';
 
     /* activity */
     h += '<details class="fold"' + (accOpenFold ? ' open' : '') + ' id="acc-fold"><summary>Your activity &amp; achievements</summary><div class="fold-body">' +
-      identityHTML(p) + '<h3>Achievements</h3>' + achievementsHTML(p) + '<h3>Favorites</h3>' + miniGrid(p.favorites.concat(p.showFavorites), 'Heart a title to keep it here.') +
+      identityHTML(p) + '<h3>Achievements</h3>' + achievementsHTML(p) + '<h3>Favorites</h3>' + miniGrid(p.favorites.concat(p.showFavorites), 'Favorite a title to keep it here.') +
       '<h3>Recent quizzes</h3>' + (p.history.length ? '<div class="list-stack">' + p.history.slice(-5).reverse().map(function (x) { return '<div class="panel" style="padding:12px"><b>' + esc({ solo: 'Solo', couples: 'Couples', series: 'TV' }[x.mode] || x.mode) + '</b> · ' + esc(new Date(x.date).toLocaleDateString()) + '<div class="muted" style="font-size:.85rem">' + esc((x.top || []).slice(0, 3).join(' · ')) + '</div></div>'; }).join('') + '</div>' : '<p class="muted">No quizzes yet.</p>') +
       '</div></details>';
 
     /* account actions */
-    h += '<div class="panel"><div class="panel-title">Account</div><div class="row">' +
+    h += '<div class="acc-actions">' +
       (p.guest ? '<button class="btn btn-primary" id="acc-create">Create an account</button>' : '') +
-      '<button class="btn" id="acc-switch">Switch account</button><button class="btn btn-danger" id="acc-out">Log out</button></div></div>' +
+      '<button class="btn" id="acc-switch">Switch account</button><button class="btn btn-danger" id="acc-out">Log out</button></div>' +
       '<p class="fineprint" style="text-align:center">Movie data and ratings from TMDB and JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB. Rotten Tomatoes, IMDb and Metacritic scores are provided via OMDb.</p>';
-    root.innerHTML = '<div class="page-head"><span class="eyebrow">Your space</span><h1>Account</h1></div><div class="stack">' + h + '</div>';
+    root.innerHTML = '<div class="page-head compact"><h1>Account</h1></div><div class="stack">' + h + '</div>';
     bindShare();
+    $$('.pz-fold').forEach(function (d) { d.addEventListener('toggle', function () { accOpen[d.dataset.pz] = d.open; }); });
     var fold = $('#acc-fold'); if (fold) fold.addEventListener('toggle', function () { accOpenFold = fold.open; });
     $('#acc-pq').onclick = openPersonalityQuiz;
     $('#acc-omdb-save').onclick = function () {
       R.setKey($('#acc-omdb').value); R.clearCache();
-      toast(R.hasKey() ? 'Key saved — ratings will load in each title' : 'Key removed');
+      toast(R.hasKey() ? 'Key saved. Ratings will load in each title.' : 'Key removed');
     };
     $('#acc-out').onclick = signOutToWelcome; $('#acc-switch').onclick = signOutToWelcome;
     var cr = $('#acc-create'); if (cr) cr.onclick = function () { openWelcome('signup'); };
@@ -1322,21 +1633,22 @@
   function bindShare() { var c = $('#share-copy'), g = $('#share-go'); if (c) c.onclick = copyAppLink; if (g) g.onclick = shareApp; }
   function persistLook(fields) {
     var p = me(); Object.keys(fields).forEach(function (k) { p[k] = fields[k]; });
-    A.updatePerson(p.id, fields); renderHeaderProfile(); renderAccount();
+    A.updatePerson(p.id, fields); renderHeaderProfile(); rerenderAccount();
   }
   $('#account-root').addEventListener('click', function (ev) {
     var b;
-    if ((b = ev.target.closest('[data-av-style]'))) persistLook({ style: b.dataset.avStyle });
+    if ((b = ev.target.closest('[data-av-set]'))) { avSet = Number(b.dataset.avSet); rerenderAccount(); }
+    else if ((b = ev.target.closest('[data-av-style]'))) persistLook({ style: b.dataset.avStyle });
     else if ((b = ev.target.closest('[data-av-emoji]'))) persistLook({ emoji: b.dataset.avEmoji, style: 'emoji' });
     else if ((b = ev.target.closest('[data-av-bg]'))) persistLook({ bg: b.dataset.avBg });
     else if ((b = ev.target.closest('[data-av-color]'))) { var p = me(); p.bg = ''; A.updatePerson(p.id, { color: b.dataset.avColor }); var st = A.loadStore(), rec = st.people.find(function (x) { return x.id === p.id; }); if (rec) { rec.bg = ''; localStorage.setItem(A.ACCOUNTS_KEY, JSON.stringify(st)); } persistLook({ color: b.dataset.avColor, bg: '' }); }
     else if ((b = ev.target.closest('[data-av-frame]'))) persistLook({ frame: b.dataset.avFrame });
-    else if ((b = ev.target.closest('[data-theme]'))) { setTheme({ preset: b.dataset.theme, mode: undefined, accent: undefined }); renderAccount(); }
-    else if ((b = ev.target.closest('[data-mode]'))) { setTheme({ mode: b.dataset.mode }); renderAccount(); }
+    else if ((b = ev.target.closest('[data-theme]'))) { setTheme({ preset: b.dataset.theme, mode: undefined, accent: undefined }); rerenderAccount(); }
+    else if ((b = ev.target.closest('[data-mode]'))) { setTheme({ mode: b.dataset.mode }); rerenderAccount(); }
   });
   $('#account-root').addEventListener('change', function (ev) {
     if (ev.target.id === 'acc-name') { var v = ev.target.value.trim(); if (v) { persistLook({ name: v.slice(0, 24) }); toast('Name updated'); } }
-    if (ev.target.id === 'acc-accent') { setTheme({ accent: ev.target.value }); renderAccount(); }
+    if (ev.target.id === 'acc-accent') { setTheme({ accent: ev.target.value }); rerenderAccount(); }
   });
 
   /* ---------- welcome / sign-in ---------- */
@@ -1347,7 +1659,7 @@
     renderHeaderProfile(); pickHero(false); renderBrowse(true);
     goto('home');
     var p = me();
-    toast(p && p.guest ? 'Browsing as Guest' : 'Welcome, ' + (p ? p.name : '') + ' 🍿');
+    toast(p && p.guest ? 'Browsing as Guest' : 'Welcome, ' + (p ? p.name : ''));
     maybeStartPersonalityQuiz();
   }
   function signOutToWelcome() { A.setSession(null); refreshPeople(); renderHeaderProfile(); openWelcome('main'); }
@@ -1356,7 +1668,7 @@
     var claimed = folks.filter(function (x) { return !x.unclaimed && !x.guest; });
     var unclaimed = folks.filter(function (x) { return x.unclaimed; });
     var err = '<p class="error hidden" id="w-error"></p>';
-    function head(sub) { return '<div class="welcome-head"><div class="pass-emoji">🎬🍿</div><h2>Movie Night</h2><p class="muted">' + sub + '</p></div>'; }
+    function head(sub) { return '<div class="welcome-head"><svg class="welcome-mark" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="4" fill="currentColor"/><path d="M10 9l5 3-5 3z" fill="var(--accent-ink)"/></svg><h2>Movie Night</h2><p class="muted">' + sub + '</p></div>'; }
     function showErr(msg) { var e = $('#w-error'); e.textContent = msg; e.classList.remove('hidden'); }
     var cryptoFail = 'Sign-in isn\'t available in this browser (Web Crypto is missing). Try a current browser.';
     if (mode === 'login') {
@@ -1385,7 +1697,7 @@
         function done(r) { if (!r.ok) showErr(r.error); else enterAs(r.account.id); }
         function fail() { showErr(cryptoFail); }
         if (mode === 'claim') A.claimAccount(claimId, { email: email, pin: pin }).then(done).catch(fail);
-        else A.createAccount({ name: $('#w-name').value, email: email, pin: pin, emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], color: COLORS[Math.floor(Math.random() * COLORS.length)] }).then(done).catch(fail);
+        else A.createAccount({ name: $('#w-name').value, email: email, pin: pin, emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], style: 'mono', color: COLORS[Math.floor(Math.random() * COLORS.length)] }).then(done).catch(fail);
       };
     } else {
       card.innerHTML = head('Tell it your mood, answer a few this-or-that questions, and get the movie or show that fits tonight. Accounts live on this device only.') +

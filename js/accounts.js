@@ -70,12 +70,22 @@
   }
   function normTop20(t) {
     t = (t && typeof t === 'object') ? t : {};
+    var mine = (t.mine && typeof t.mine === 'object') ? t.mine : {};
+    function ids(a) {
+      var out = [];
+      (Array.isArray(a) ? a : []).forEach(function (x) { if (typeof x === 'string' && out.indexOf(x) < 0 && out.length < 20) out.push(x); });
+      return out;
+    }
     return {
-      mode: t.mode === 'canon' ? 'canon' : 'foryou',
+      mode: (t.mode === 'canon' || t.mode === 'mine') ? t.mode : 'foryou',
       genres: Array.isArray(t.genres) ? t.genres : [],
       era: typeof t.era === 'string' ? t.era : '',
       hideWatched: !!t.hideWatched,
-      hidden: Array.isArray(t.hidden) ? t.hidden : []
+      hidden: Array.isArray(t.hidden) ? t.hidden : [],
+      /* v13: the user's own hand-built lists (max 20 each), in rank order. */
+      mine: { movies: ids(mine.movies), shows: ids(mine.shows) },
+      /* ids that were auto-filled from suggestions and not yet confirmed by the user (they do not count as taste signals). */
+      auto: ids(t.auto)
     };
   }
   function getData(id) {
@@ -146,7 +156,7 @@
       var store = loadStore();
       var acct = {
         id: newId(), name: name, email: email, salt: salt, hash: hash,
-        emoji: input.emoji || '🎬', color: input.color || '#e8b34b',
+        emoji: input.emoji || '🎬', color: input.color || '#e8b34b', style: input.style === 'mono' ? 'mono' : 'emoji',
         createdAt: new Date().toISOString(), unclaimed: false
       };
       store.people.push(acct);
@@ -192,7 +202,7 @@
       if (id !== GUEST_ID) return null;
       rec = {
         id: GUEST_ID, name: 'Guest', email: null, salt: null, hash: null,
-        emoji: '👤', color: '#8a8fa3', createdAt: null, unclaimed: false, guest: true
+        emoji: '👤', color: '#8a8fa3', style: 'mono', createdAt: null, unclaimed: false, guest: true
       };
       store.people.push(rec);
     }
