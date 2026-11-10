@@ -64,7 +64,18 @@
     return {
       favorites: [], watchlist: [], history: [], taste: null, ratings: {}, watched: [], events: [], quizProfile: null, achievements: [],
       snapshots: [], quizBoost: null, foundPerfect: false,
-      showFavorites: [], showWatchlist: []
+      showFavorites: [], showWatchlist: [],
+      settings: {}, top20: { mode: 'foryou', genres: [], era: '', hideWatched: false, hidden: [] }
+    };
+  }
+  function normTop20(t) {
+    t = (t && typeof t === 'object') ? t : {};
+    return {
+      mode: t.mode === 'canon' ? 'canon' : 'foryou',
+      genres: Array.isArray(t.genres) ? t.genres : [],
+      era: typeof t.era === 'string' ? t.era : '',
+      hideWatched: !!t.hideWatched,
+      hidden: Array.isArray(t.hidden) ? t.hidden : []
     };
   }
   function getData(id) {
@@ -86,6 +97,9 @@
        saved before v6 simply default to empty lists. */
     out.showFavorites = Array.isArray(d.showFavorites) ? d.showFavorites : [];
     out.showWatchlist = Array.isArray(d.showWatchlist) ? d.showWatchlist : [];
+    /* v12: per-account appearance/app settings and Top 20 customisation. */
+    out.settings = (d.settings && typeof d.settings === 'object') ? d.settings : {};
+    out.top20 = normTop20(d.top20);
     return out;
   }
   function saveData(id, data) {
@@ -94,7 +108,8 @@
       favorites: data.favorites || [], watchlist: data.watchlist || [],
       history: data.history || [], taste: data.taste || null, ratings: data.ratings || {}, watched: data.watched || [], events: data.events || [], quizProfile: data.quizProfile || null, achievements: data.achievements || [],
       snapshots: data.snapshots || [], quizBoost: data.quizBoost || null, foundPerfect: !!data.foundPerfect,
-      showFavorites: data.showFavorites || [], showWatchlist: data.showWatchlist || []
+      showFavorites: data.showFavorites || [], showWatchlist: data.showWatchlist || [],
+      settings: data.settings || {}, top20: normTop20(data.top20)
     });
   }
 
@@ -181,8 +196,9 @@
       };
       store.people.push(rec);
     }
-    ['name', 'emoji', 'color'].forEach(function (k) {
-      if (fields && fields[k]) rec[k] = fields[k];
+    /* v12 adds avatar style ('emoji' | 'monogram'), a gradient preset id and a frame style. */
+    ['name', 'emoji', 'color', 'style', 'bg', 'frame'].forEach(function (k) {
+      if (fields && fields[k] !== undefined && fields[k] !== null && fields[k] !== '') rec[k] = fields[k];
     });
     saveStore(store);
     return rec;
@@ -249,7 +265,7 @@
     getData: getData, saveData: saveData,
     getSession: getSession, setSession: setSession,
     migrateLegacyIfNeeded: migrateLegacyIfNeeded,
-    hashSecret: hashSecret, emptyData: emptyData
+    hashSecret: hashSecret, emptyData: emptyData, normTop20: normTop20
   };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; }
   global.MovieAccounts = api;

@@ -200,7 +200,8 @@
       var like = likedZ.length ? topMean(likedZ.map(function (z) { return cosineArrays(z, zm); }), 3) : taste;
       var dis = dislikedZ.length ? topMean(dislikedZ.map(function (z) { return cosineArrays(z, zm); }), 2) : 0;
       var fit = 0.72 * taste + 0.28 * like - 0.22 * Math.max(0, dis - Math.max(0, like) * 0.6);
-      return { movie: m, score: taste, fit: fit, rank: fit + pop * (0.02 + appeal(m) * 0.10), z: zm };
+      var rt = typeof m.r === 'number' ? Math.max(-0.04, Math.min(0.05, (m.r - 6.5) * 0.02)) : 0;
+      return { movie: m, score: taste, fit: fit, rank: fit + pop * (0.02 + appeal(m) * 0.10) + rt, z: zm };
     });
   }
 
@@ -548,7 +549,315 @@
     });
   }
 
+  /* =====================================================================
+     v12 — mood-first, adaptive quiz + personalised lists
+     ---------------------------------------------------------------------
+     The old quiz asked "which of these two?" with pairs chosen mostly for
+     contrast. v12 treats the quiz as a search problem:
+       1. TONIGHT beats TASTE. The user can say what mood they are in (and
+          what they are NOT in the mood for) before round one. That becomes a
+          prior; long-term taste is deliberately NOT mixed into the quiz, so a
+          horror fan who wants something light tonight is not dragged back
+          toward horror.
+       2. Every question is chosen to split the films that are STILL IN PLAY
+          as evenly as possible (a "20 questions" bisection in taste space),
+          so each answer removes roughly half of the remaining plausible
+          films instead of re-confirming what is already known.
+       3. The last rounds are finals between the current front-runners.
+       4. candidatesInPlay() exposes how far the field has narrowed.
+     ===================================================================== */
+  var MOODS = [
+    { id: 'thrill', label: 'Edge of my seat', icon: '⚡', up: { adrenaline: 1, dark: 0.3 }, down: { cozy: 1 } },
+    { id: 'laugh', label: 'Make me laugh', icon: '😂', up: { funny: 1, cozy: 0.3 }, down: { dark: 0.8, scary: 1 } },
+    { id: 'heart', label: 'Hit me in the heart', icon: '💛', up: { heartwarming: 1, romantic: 0.3 }, down: { scary: 0.8 } },
+    { id: 'mind', label: 'Mess with my mind', icon: '🧠', up: { brainy: 1, weird: 0.5 }, down: { cozy: 0.6 } },
+    { id: 'scare', label: 'Scare me', icon: '👻', up: { scary: 1, dark: 0.5 }, down: { cozy: 1, funny: 0.5 } },
+    { id: 'romance', label: 'Something romantic', icon: '💘', up: { romantic: 1, heartwarming: 0.4 }, down: { scary: 1 } },
+    { id: 'epic', label: 'A big escape', icon: '🌌', up: { epic: 1, adrenaline: 0.4 }, down: {} },
+    { id: 'cozy', label: 'Easy comfort watch', icon: '🛋️', up: { cozy: 1, heartwarming: 0.5 }, down: { dark: 1, scary: 1 } },
+    { id: 'dark', label: 'Dark & gritty', icon: '🌑', up: { dark: 1, brainy: 0.3 }, down: { cozy: 0.8, funny: 0.4 } }
+  ];
+  var AVOIDABLE = ['Horror', 'Romance', 'Animation', 'War', 'Western', 'Musical', 'Documentary', 'Superhero', 'Sci-Fi', 'Fantasy', 'Crime'];
+  var MOOD_BY_ID = {};
+  MOODS.forEach(function (m) { MOOD_BY_ID[m.id] = m; });
+  var MOOD_PRIOR_WEIGHT = 2.5;
+
+  /* A pseudo-film that sits where the chosen moods say tonight should land:
+     the average film, pushed up on wanted axes and down on unwanted ones. */
+  function moodPseudoFilm(moodIds) {
+    var v = MU.slice(), k, a;
+    (moodIds || []).forEach(function (id) {
+      var m = MOOD_BY_ID[id]; if (!m) return;
+      for (a in m.up) { k = AXES.indexOf(a); v[k] = Math.min(10, v[k] + (10 - MU[k]) * 0.8 * m.up[a]); }
+      for (a in m.down) { k = AXES.indexOf(a); v[k] = Math.max(0, v[k] - MU[k] * 0.7 * m.down[a]); }
+    });
+    var vec = {};
+    AXES.forEach(function (ax, i) { vec[ax] = v[i]; });
+    return { id: '__mood__', vector: vec, genres: [] };
+  }
+  /* Preference vector for the quiz: tonight's mood prior + this session's picks. */
+  function quizPreference(picks, moodIds) {
+    var pref = preferenceFromPicks(picks || []);
+    if (moodIds && moodIds.length) addMovie(pref, moodPseudoFilm(moodIds), MOOD_PRIOR_WEIGHT);
+    return pref;
+  }
+
+  function ratingOf(m) { return typeof m.r === 'number' ? m.r : (typeof m.ir === 'number' ? m.ir : null); }
+  /* Blend of the internal appeal score and the public rating when we have one. */
+  function quality(m) {
+    var ap = (typeof m.ap === 'number' ? m.ap : 50) / 100, r = ratingOf(m);
+    if (r == null) return ap;
+    return 0.5 * ap + 0.5 * Math.max(0, Math.min(1, (r - 5) / 4));
+  }
+
+  /* contextFilter v12: also honours "not tonight" genres and chosen platforms. */
+  var baseContextFilter = contextFilter;
+  function contextFilterV12(ctx) {
+    ctx = ctx || {};
+    var base = baseContextFilter(ctx), avoid = ctx.avoid || [], plats = ctx.platforms || [];
+    return function (m) {
+      if (!base(m)) return false;
+      if (avoid.length && (m.genres || []).some(function (g) { return avoid.indexOf(g) !== -1; })) return false;
+      if (plats.length) {
+        if (!m.pl || !m.pl.length) return false;
+        if (!m.pl.some(function (p) { return plats.indexOf(p) !== -1; })) return false;
+      }
+      return true;
+    };
+  }
+
+  function subsample(arr, n, rng) {
+    if (arr.length <= n) return arr.slice();
+    var out = [], step = arr.length / n, i;
+    for (i = 0; i < n; i++) out.push(arr[Math.min(arr.length - 1, Math.floor(i * step + rng() * step))]);
+    return out;
+  }
+
+  /* How many films are still plausible answers? exp(entropy) of a softmax over
+     fit scores — a smooth "effective number of candidates". */
+  function candidatesInPlay(movies, pref, options) {
+    options = options || {};
+    calibrate(movies);
+    var exclude = {};
+    (options.excludeIds || []).forEach(function (id) { exclude[id] = true; });
+    var pass = typeof options.filter === 'function' ? options.filter : null;
+    var pool = movies.filter(function (m) { return !exclude[m.id] && (!pass || pass(m)); });
+    if (!pool.length) return 0;
+    if (!zPref(pref)) return pool.length;
+    var scored = scoreAll(pool, pref, { anchors: options.anchors || null, popularity: 0 });
+    var tau = 0.10, max = -Infinity, i;
+    for (i = 0; i < scored.length; i++) if (scored[i].fit > max) max = scored[i].fit;
+    var sum = 0, w = new Array(scored.length);
+    for (i = 0; i < scored.length; i++) { w[i] = Math.exp((scored[i].fit - max) / tau); sum += w[i]; }
+    var H = 0;
+    for (i = 0; i < w.length; i++) { var p = w[i] / sum; if (p > 1e-12) H -= p * Math.log(p); }
+    return Math.max(1, Math.min(pool.length, Math.round(Math.exp(H))));
+  }
+
+  /* Choose the next this-or-that pair by bisecting the films still in play. */
+  function adaptivePair(movies, usedIds, roundIndex, totalRounds, pref, rng, options) {
+    options = options || {};
+    calibrate(movies);
+    var used = {}; usedIds.forEach(function (id) { used[id] = true; });
+    var pass = typeof options.filter === 'function' ? options.filter : null;
+    var pool = movies.filter(function (m) { return !used[m.id] && (!pass || pass(m)); });
+    if (pool.length < 2) return null;
+    var phase = totalRounds ? roundIndex / totalRounds : 0;
+    var roundsLeft = totalRounds - roundIndex;
+    /* Only ask about films a typical viewer has heard of. */
+    var floor = phase < 0.34 ? 2 : 1;
+    var famous = pool.filter(function (m) { return recognizability(m) >= floor; });
+    if (famous.length < 40 && floor === 2) famous = pool.filter(function (m) { return recognizability(m) >= 1; });
+    if (famous.length >= 12) pool = famous;
+
+    var zp = pref ? zPref(pref) : null;
+    var scored = pool.map(function (m) { var z = zMovie(m); return { m: m, z: z, s: zp ? cosineArrays(zp, z) : 0 }; });
+    if (zp) scored.sort(function (a, b) { return b.s - a.s; });
+
+    /* The region still in play shrinks as the quiz proceeds. */
+    var keep = zp ? (phase < 0.2 ? 0.5 : phase < 0.45 ? 0.25 : phase < 0.7 ? 0.1 : 0.04) : 1;
+    var region = zp ? scored.slice(0, Math.max(60, Math.round(scored.length * keep))) : scored;
+    var evalSet = subsample(region, 160, rng);
+
+    /* Option candidates. Finals (last 2 rounds): current front-runners only.
+       Otherwise a genre-stratified draw from the region so options differ. */
+    var cands = [];
+    if (zp && roundsLeft <= 2) {
+      cands = scored.slice(0, 14);
+    } else {
+      var buckets = {}, keys = [], i, g;
+      var src = region.length > 400 ? subsample(region, 400, rng) : region;
+      for (i = 0; i < src.length; i++) {
+        g = src[i].m.genres[0] || 'Other';
+        if (!buckets[g]) { buckets[g] = []; keys.push(g); }
+        buckets[g].push(src[i]);
+      }
+      for (i = keys.length - 1; i > 0; i--) { var j = Math.floor(rng() * (i + 1)); var t = keys[i]; keys[i] = keys[j]; keys[j] = t; }
+      keys.forEach(function (k) { var arr = buckets[k]; for (var x = arr.length - 1; x > 0; x--) { var y = Math.floor(rng() * (x + 1)); var z2 = arr[x]; arr[x] = arr[y]; arr[y] = z2; } });
+      var progressed = true;
+      while (cands.length < 26 && progressed) {
+        progressed = false;
+        for (i = 0; i < keys.length && cands.length < 26; i++) {
+          if (buckets[keys[i]].length) { cands.push(buckets[keys[i]].pop()); progressed = true; }
+        }
+      }
+    }
+    if (cands.length < 2) cands = scored.slice(0, Math.min(scored.length, 12));
+    if (cands.length < 2) return null;
+
+    var byIdMap = {};
+    movies.forEach(function (m) { byIdMap[m.id] = m; });
+    var recentAxes = [], u, m1, m2;
+    for (u = Math.max(0, usedIds.length - 4); u + 1 < usedIds.length; u += 2) {
+      m1 = byIdMap[usedIds[u]]; m2 = byIdMap[usedIds[u + 1]];
+      if (m1 && m2) recentAxes.push(dominantAxis(m1, m2));
+    }
+
+    var best = null, bestScore = -Infinity, a, b, c, n = evalSet.length;
+    for (var ci = 0; ci < cands.length; ci++) for (var cj = ci + 1; cj < cands.length; cj++) {
+      a = cands[ci]; b = cands[cj];
+      var dist = vectorDistance(a.m, b.m);
+      var minDist = phase < 0.34 ? 3.2 : 2.2;
+      if (dist < minDist) continue;
+      var wins = 0;
+      for (c = 0; c < n; c++) { if (cosineArrays(evalSet[c].z, a.z) > cosineArrays(evalSet[c].z, b.z)) wins++; }
+      var p = n ? wins / n : 0.5;
+      var balance = 1 - Math.abs(2 * p - 1);
+      var conc = distanceConcentration(a.m, b.m);
+      var recog = recognizability(a.m) + recognizability(b.m);
+      var plaus = zp ? (a.s + b.s) / 2 : 0;
+      var repeat = recentAxes.indexOf(dominantAxis(a.m, b.m)) !== -1;
+      var s;
+      if (zp && roundsLeft <= 2) {
+        s = 2.2 * balance + 1.6 * plaus + 0.1 * Math.min(dist, 6) + 0.05 * recog;
+      } else {
+        s = 3.0 * balance + 1.2 * conc + 0.25 * recog + (zp ? 0.9 * plaus : 0) - (repeat ? 0.8 : 0);
+      }
+      if (s > bestScore) { bestScore = s; best = [a.m, b.m]; }
+    }
+    if (!best) best = [cands[0].m, cands[1].m];
+    return best;
+  }
+
+  /* ---------- personalised Top N ---------- */
+  var GENRE_ALIAS = {
+    'Psychological Thriller': ['Thriller', 'Mystery'], 'Mystery': ['Mystery'], 'Sci-Fi': ['Sci-Fi'],
+    'Horror': ['Horror'], 'Crime': ['Crime'], 'Action': ['Action', 'Adventure', 'Superhero'],
+    'Drama': ['Drama', 'Historical Drama'], 'Comedy': ['Comedy', 'Rom-Com'], 'Romance': ['Romance', 'Rom-Com'],
+    'Fantasy': ['Fantasy'], 'Documentary': ['Documentary', 'Docuseries'], 'Animation': ['Animation', 'Anime', 'Family']
+  };
+  function expandGenres(list) {
+    var out = [];
+    (list || []).forEach(function (g) {
+      (GENRE_ALIAS[g] || [g]).forEach(function (x) { if (out.indexOf(x) === -1) out.push(x); });
+    });
+    return out;
+  }
+  var MOOD_AXIS = {
+    'Mind-bending twists': 'brainy', 'Complex characters': 'heartwarming', 'Atmosphere and tension': 'dark',
+    'Big emotional payoff': 'heartwarming', 'Fast-paced action': 'adrenaline', 'Immersive worlds': 'epic',
+    'Clever humor': 'funny', 'Real-life stories': 'brainy'
+  };
+
+  /* A ranked, diverse list tuned to one person: taste fit + quality + the
+     genres they declared + their thumbs-ups, with a diversity pass. */
+  function personalTop(list, o) {
+    o = o || {};
+    calibrate(list);
+    var limit = o.limit || 20, taste = o.taste || null;
+    var hasTaste = !!taste && AXES.some(function (a) { return (taste[a] || 0) > 0; });
+    var declared = expandGenres(o.genres), include = expandGenres(o.includeGenres);
+    var exclude = {}, watched = {}, rated = o.rated || {};
+    (o.excludeIds || []).forEach(function (id) { exclude[id] = 1; });
+    (o.watched || []).forEach(function (id) { watched[id] = 1; });
+    function eraOk(m) {
+      var y = m.year || m.startYear || 0;
+      if (o.era === 'modern') return !y || y >= 2000;
+      if (o.era === 'recent') return !y || y >= 2015;
+      if (o.era === 'classic') return !y || y < 2000;
+      return true;
+    }
+    function base(m) {
+      if (exclude[m.id] || rated[m.id] === -1) return false;
+      if (o.hideWatched && watched[m.id]) return false;
+      if (include.length && !(m.genres || []).some(function (g) { return include.indexOf(g) !== -1; })) return false;
+      if (o.avoid && o.avoid.length && (m.genres || []).some(function (g) { return o.avoid.indexOf(g) !== -1; })) return false;
+      return eraOk(m);
+    }
+    var pool = list.filter(base);
+    var strict = pool.filter(function (m) { return quality(m) >= 0.72; });
+    if (strict.length >= limit * 4) pool = strict;
+    else { var loose = pool.filter(function (m) { return quality(m) >= 0.6; }); if (loose.length >= limit * 2) pool = loose; }
+    if (!pool.length) return [];
+    var likedZ = [], id;
+    for (id in rated) if (rated[id] === 1 && o.byId && o.byId[id]) likedZ.push(zMovie(o.byId[id]));
+    var zt = hasTaste ? zPref(taste) : null;
+    var scored = pool.map(function (m) {
+      var zm = zMovie(m);
+      var match = zt ? (50 + 50 * Math.tanh(1.25 * cosineArrays(zt, zm))) / 100 : 0.5;
+      var g = 0;
+      if (declared.length) {
+        if (declared.indexOf(m.genres[0]) !== -1) g = 1;
+        else if (m.genres.some(function (x) { return declared.indexOf(x) !== -1; })) g = 0.6;
+      }
+      var anchor = likedZ.length ? Math.max(0, topMean(likedZ.map(function (z) { return cosineArrays(z, zm); }), 3)) : 0;
+      var q = quality(m);
+      var s = (zt ? 0.46 : 0.2) * match + 0.24 * q + (declared.length ? 0.14 : 0) * g + (likedZ.length ? 0.16 : 0) * anchor +
+        (watched[m.id] && rated[m.id] === 1 ? 0.04 : 0);
+      return { movie: m, s: s, match: Math.round(match * 100), z: zm };
+    }).sort(function (a, b) { return b.s - a.s; });
+    var cand = scored.slice(0, Math.max(120, limit * 10)), out = [], gc = {};
+    while (out.length < limit && cand.length) {
+      var bi = -1, bv = -1e9, i, j;
+      for (i = 0; i < cand.length; i++) {
+        var maxSim = 0;
+        for (j = 0; j < out.length; j++) { var sm = cosineArrays(cand[i].z, out[j].z); if (sm > maxSim) maxSim = sm; }
+        var pg = cand[i].movie.genres[0] || '';
+        var v = cand[i].s - 0.14 * Math.max(0, maxSim) - ((gc[pg] || 0) >= 5 ? 0.2 : 0);
+        if (v > bv) { bv = v; bi = i; }
+      }
+      var pick = cand.splice(bi, 1)[0];
+      out.push(pick);
+      var pk = pick.movie.genres[0] || '';
+      gc[pk] = (gc[pk] || 0) + 1;
+    }
+    return out.map(function (r) {
+      return { movie: r.movie, match: r.match, score: r.s, why: hasTaste ? whyFor(taste, r.movie) : 'A consensus favourite.' };
+    });
+  }
+
+  /* ---------- Tonight's Pick: weighted-random, never the same one twice running ---------- */
+  function pickTonight(list, o) {
+    o = o || {};
+    var rng = o.rng || Math.random, recent = {}, watched = {}, rated = o.rated || {};
+    (o.recent || []).forEach(function (id) { recent[id] = 1; });
+    (o.watched || []).forEach(function (id) { watched[id] = 1; });
+    var taste = o.taste || null;
+    var hasTaste = !!taste && AXES.some(function (a) { return (taste[a] || 0) > 0; });
+    var pool = list.filter(function (m) {
+      var y = m.year || m.startYear || 0;
+      return m.poster && !/\.svg(?:\?|$)/i.test(m.poster) && y >= (o.minYear || 2000) && quality(m) >= 0.74 &&
+        !recent[m.id] && !watched[m.id] && rated[m.id] !== -1;
+    });
+    if (pool.length < 12) pool = list.filter(function (m) { return m.poster && !recent[m.id] && rated[m.id] !== -1; });
+    if (!pool.length) pool = list;
+    if (hasTaste) calibrate(list);
+    var best = null, bestK = -1;
+    pool.forEach(function (m) {
+      var w = Math.pow(Math.max(0.05, quality(m)), 2) * (hasTaste ? (0.6 + matchPercent(taste, m) / 100) : 1);
+      var k = Math.pow(Math.max(1e-9, rng()), 1 / Math.max(1e-6, w));
+      if (k > bestK) { bestK = k; best = m; }
+    });
+    return best;
+  }
+
+  function recalibrate() { calibratedFor = null; }
+
   var api = {
+    MOODS: MOODS, AVOIDABLE: AVOIDABLE, moodPseudoFilm: moodPseudoFilm, quizPreference: quizPreference,
+    adaptivePair: adaptivePair, candidatesInPlay: candidatesInPlay, personalTop: personalTop,
+    pickTonight: pickTonight, quality: quality, ratingOf: ratingOf, expandGenres: expandGenres,
+    MOOD_AXIS: MOOD_AXIS, recalibrate: recalibrate,
     AXES: AXES, AXIS_LABELS: AXIS_LABELS, makeRng: makeRng, vectorArray: vectorArray,
     cosine: cosine, cosineArrays: cosineArrays, vectorDistance: vectorDistance,
     emptyPreference: emptyPreference, addMovie: addMovie, preferenceFromPicks: preferenceFromPicks,
@@ -559,7 +868,7 @@
     qualityPrior: qualityPrior, recognizability: recognizability,
     distanceConcentration: distanceConcentration, dominantAxis: dominantAxis,
     COUPLES_FLOOR: COUPLES_FLOOR, COUPLES_FLOOR_STEPS: COUPLES_FLOOR_STEPS,
-    REJECT_WEIGHT: REJECT_WEIGHT, calibrate: calibrate, contextFilter: contextFilter,
+    REJECT_WEIGHT: REJECT_WEIGHT, calibrate: calibrate, contextFilter: contextFilterV12,
     anchorsFromPicks: anchorsFromPicks, appeal: appeal, zPref: zPref, zMovie: zMovie
   };
 
