@@ -1,3 +1,20 @@
+# Movie Night v14 — design overhaul
+
+Copy every file in this ZIP into the matching path in the repo (overwrite when asked), commit, and let GitHub Pages redeploy. The service-worker cache is bumped to `movienight-v14`, so installed copies pick up the new look on their next open.
+
+## What changed (UI only, no data or engine changes)
+- **One consolidated design system** (`css/styles.css`): the stacked v12 + v13 override layers are replaced by a single, ordered stylesheet with consistent spacing, radii, type scale, elevation and motion. All 8 themes and light/dark mode still work through the same colour tokens.
+- **Home:** a stronger Tonight's Pick hero, a "three ways in" row (Find my match / Shuffle / Top 20), and a sticky search + genre toolbar. Cards are now poster-first (title and year underneath); thumbs and Watched sit on the poster. Search has a clear button and every empty state offers "Clear filters".
+- **Quiz:** every mood is a tile with a line icon, a sticky Start button on phones, a cleaner play screen with a progress bar and "films in play" counter, and desktop shortcuts (left/right arrow to pick, down for neither). Results lead with a featured top pick.
+- **Shuffle:** modes are a tile grid with a one-line description each (no more hidden horizontal scroll).
+- **Top 20:** larger ranks with gold emphasis for the top three, match % under the title, and a roomier edit toolbar for "My list" on phones.
+- **Detail sheet:** sticky close button, and a two-column layout (poster beside details) on desktop.
+- **Welcome screen:** brand mark plus three short value points.
+- **Extras:** back-to-top button, refined account header, tidier drawer, better focus states, reduced-motion support.
+- The "no emoji in the interface" rule from v13 is kept (icons are line SVGs). `node tests/ui-smoke.test.js` and `node tests/ui-v13.test.js` pass unchanged.
+
+---
+
 # Movie Night v12 — upgrade notes
 
 Copy every file in this ZIP into the matching path in the repo (overwrite when asked), commit, and let GitHub Pages redeploy.

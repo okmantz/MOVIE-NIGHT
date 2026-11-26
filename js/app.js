@@ -1,4 +1,4 @@
-/* Movie Night — UI (v12). Accounts and all data live on this device only
+/* Movie Night — UI (v14). Accounts and all data live on this device only
    (localStorage, see js/accounts.js) — there is no server in this version,
    so nothing syncs between phones. Sections: core · themes & avatars ·
    watchlist drawer · browse · detail · quiz · Top 20 · shuffle · account. */
@@ -57,7 +57,38 @@
     film: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 9h16M4 15h16M8 5v14M16 5v14"/>',
     tv: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>', list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
-    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', award: '<circle cx="12" cy="9" r="5"/><path d="M9 13.5L8 21l4-2.5 4 2.5-1-7.5"/>'
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', award: '<circle cx="12" cy="9" r="5"/><path d="M9 13.5L8 21l4-2.5 4 2.5-1-7.5"/>',
+    eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor"/>',
+    shuffle: '<path d="M3 7h3c4 0 5 10 9 10h6M3 17h3c1.5 0 2.5-1.2 3.5-2.8M15 7h6M18 4l3 3-3 3M18 14l3 3-3 3"/>',
+    trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M9 21h6M12 14v7"/>',
+    lockSm: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-5.5 6.5-5.5s6.5 1.9 6.5 5.5M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c2 .7 3.5 2.3 3.5 5.2"/>',
+    dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01M12 12h.01"/>'
+  };
+  /* One line icon per quiz mood and per shuffle mode (the UI chrome stays emoji-free). */
+  var MOOD_ICON = {
+    thrill: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+    laugh: '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2.5 4 2.5S16 14 16 14M9 9.5h.01M15 9.5h.01"/>',
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    mind: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    scare: '<path d="M5 21V11a7 7 0 0 1 14 0v10l-3.5-2-3.5 2-3.5-2z"/><path d="M9.5 11h.01M14.5 11h.01"/>',
+    romance: '<path d="M8 22h8M12 15v7M7 3h10l-1 6a4 4 0 0 1-8 0z"/>',
+    epic: '<path d="M3 20l6-11 4 6 3-4 5 9z"/>',
+    cozy: '<path d="M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h2a2 2 0 0 1 0 4h-2M8 3v2M12 3v2"/>',
+    dark: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'
+  };
+  var SHUF_ICON = {
+    surprise: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01M12 12h.01"/>',
+    match: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor"/>',
+    unseen: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    outside: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+    hidden: '<path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21L8 9l4-6 4 6z"/>',
+    critics: '<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9z"/>',
+    date: '<path d="M8 22h8M12 15v7M7 3h10l-1 6a4 4 0 0 1-8 0z"/>',
+    short: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    throwback: '<path d="M11 6L3 12l8 6zM21 6l-8 6 8 6z"/>',
+    horror: '<path d="M5 21V11a7 7 0 0 1 14 0v10l-3.5-2-3.5 2-3.5-2z"/><path d="M9.5 11h.01M14.5 11h.01"/>'
   };
 
   /* ---------- covers & cards ---------- */
@@ -401,14 +432,17 @@
   }
 
   /* ---------- thumbs + watched on every card ---------- */
-  function watchedBtnInner(w) { return w ? ic(ICON.check, 13) + ' Watched' : ic(ICON.plus, 13) + ' Watched'; }
-  function quickSpansHTML(m) {
-    var p = profile();
+  function watchedBtnInner(w, compact) {
+    if (compact) return ic(w ? ICON.check : ICON.eye, 16);
+    return w ? ic(ICON.check, 13) + ' Watched' : ic(ICON.plus, 13) + ' Watched';
+  }
+  function quickSpansHTML(m, compact) {
+    var p = profile(), c = compact ? ' qc' : '';
     var r = (p && p.ratings && p.ratings[m.id]) || 0;
     var w = !!(p && p.watched && p.watched.indexOf(m.id) >= 0);
-    return '<span class="qbtn qi' + (r === 1 ? ' on' : '') + '" data-qrate="1" data-qid="' + m.id + '" role="button" title="Love it" aria-label="Love it">' + ic(ICON.up, 15) + '</span>' +
-      '<span class="qbtn qi' + (r === -1 ? ' on' : '') + '" data-qrate="-1" data-qid="' + m.id + '" role="button" title="Not for me" aria-label="Not for me">' + ic(ICON.down, 15) + '</span>' +
-      '<span class="qbtn qwatch' + (w ? ' on' : '') + '" data-qwatch="' + m.id + '" role="button" title="Mark as already watched">' + watchedBtnInner(w) + '</span>';
+    return '<span class="qbtn qi' + c + (r === 1 ? ' on' : '') + '" data-qrate="1" data-qid="' + m.id + '" role="button" title="Love it" aria-label="Love it">' + ic(ICON.up, compact ? 16 : 15) + '</span>' +
+      '<span class="qbtn qi' + c + (r === -1 ? ' on' : '') + '" data-qrate="-1" data-qid="' + m.id + '" role="button" title="Not for me" aria-label="Not for me">' + ic(ICON.down, compact ? 16 : 15) + '</span>' +
+      '<span class="qbtn qwatch' + c + (w ? ' on' : '') + '" data-qwatch="' + m.id + '"' + (compact ? ' data-compact="1"' : '') + ' role="button" title="Mark as already watched" aria-label="Mark as already watched">' + watchedBtnInner(w, compact) + '</span>';
   }
   function refreshQuick(id) {
     var p = profile(); if (!p) return;
@@ -419,7 +453,7 @@
     });
     document.querySelectorAll('[data-qwatch="' + id + '"]').forEach(function (b) {
       b.classList.toggle('on', w);
-      b.innerHTML = watchedBtnInner(w);
+      b.innerHTML = watchedBtnInner(w, !!b.dataset.compact);
     });
   }
   /* Capture phase so a tap on thumbs/watched never also opens the card. */
@@ -450,12 +484,15 @@
     return (p[f] || []).indexOf(id) >= 0;
   }
   function cardHTML(m) {
-    return '<button class="card" data-open="' + m.id + '">' + coverHTML(m) +
+    return '<button class="card card-p" data-open="' + m.id + '"><div class="card-media">' + coverHTML(m) +
+      '<div class="card-actions">' + quickSpansHTML(m, true) + '</div></div>' +
       '<div class="card-body"><div class="card-title">' + esc(m.title) + '</div>' +
-      '<div class="card-sub">' + esc(metaLine(yearText(m), lengthLabel(m), m.rating)) + '</div>' +
-      '<div>' + (m.genres || []).slice(0, 2).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' ') + '</div>' +
-      '<div class="card-desc">' + esc(m.description) + '</div>' +
-      '<div class="quick-row">' + quickSpansHTML(m) + '</div></div></button>';
+      '<div class="card-sub">' + esc(metaLine(yearText(m), (m.genres || [])[0], lengthLabel(m))) + '</div></div></button>';
+  }
+  /* Small poster-first card for "more like this" and the favourites grid. */
+  function miniCardHTML(m) {
+    return '<button class="card card-p" data-open="' + m.id + '"><div class="card-media">' + coverHTML(m) + '</div>' +
+      '<div class="card-body"><div class="card-title">' + esc(m.title) + '</div><div class="card-sub">' + esc(yearText(m)) + '</div></div></button>';
   }
   function pairCard(m, side) {
     return '<button class="card" data-pick="' + side + '">' + coverHTML(m) +
@@ -467,15 +504,15 @@
   function resultCard(r, extra, idx, ringPct) {
     var m = r.movie, featured = idx === 0;
     var meta = metaLine(yearText(m), lengthLabel(m), m.rating, (m.genres || []).slice(0, 2).join(', '));
-    var tw = traitWhy(me(), m);
+    var tw = traitWhy(me(), m), why = ((r.why || '') + (tw ? ' ' + tw : '')).trim();
     return '<div class="result-card' + (featured ? ' featured' : '') + '">' +
       (!featured && idx != null ? '<span class="result-rank">#' + (idx + 1) + '</span>' : '') +
-      '<div class="cover-wrap" data-open="' + m.id + '" style="cursor:pointer">' + coverHTML(m) + '</div>' +
-      '<div class="result-main">' + (featured ? '<div class="top-badge">Your top pick</div>' : '') +
+      '<div class="cover-wrap" data-open="' + m.id + '">' + coverHTML(m) + '</div>' +
+      '<div class="result-main">' + (featured ? '<div class="top-badge">' + ic(ICON.award, 12) + 'Your top pick</div>' : '') +
       '<div class="card-title">' + esc(m.title) + '</div><div class="card-sub">' + esc(meta) + '</div>' +
-      (ringPct != null ? '<div class="match-row">' + ringHTML(ringPct) + '<div>' + (extra || '') + '</div></div>' : (extra || '')) +
-      '<div class="why">' + esc(r.why || '') + (tw ? ' ' + esc(tw) : '') + '</div>' +
-      '<div class="result-actions"><button class="btn btn-sm" data-open="' + m.id + '">Details</button>' +
+      (ringPct != null ? '<div class="match-row">' + ringHTML(ringPct) + '<div>' + (extra || '') + '</div></div>' : (extra || '')) + '</div>' +
+      '<div class="result-foot">' + (why ? '<div class="why">' + esc(why) + '</div>' : '') +
+      '<div class="result-actions"><button class="btn btn-sm btn-primary" data-open="' + m.id + '">Details</button>' +
       '<button class="btn btn-sm" data-watch="' + m.id + '">' + wlLabel(listHas('watchlist', m.id)) + '</button>' + quickSpansHTML(m) + '</div></div></div>';
   }
   document.addEventListener('click', function (ev) {
@@ -544,7 +581,7 @@
       '<p class="hero-desc">' + esc(m.description) + '</p>' +
       '<div class="hero-actions"><button class="btn btn-primary" data-open="' + m.id + '">Details</button>' +
       '<button class="btn" id="hero-wl">' + wlLabel(on) + '</button>' +
-      '<button class="btn" id="hero-another">Another pick</button></div></div></div>';
+      '<button class="btn" id="hero-another" aria-label="Another pick">' + ic(ICON.shuffle, 17) + '<span class="lbl">Another pick</span></button></div></div></div>';
     $('#hero-wl').onclick = function () { var now = toggleList('watchlist', m.id); this.innerHTML = wlLabel(now); };
     $('#hero-another').onclick = function () { pickHero(true); };
   }
@@ -588,14 +625,28 @@
   }
   function renderBrowse(reset) {
     if (reset) browse.shown = PAGE_SIZE;
-    var all = browseList(), page = all.slice(0, browse.shown);
-    $('#browse-count').textContent = all.length.toLocaleString() + (browse.media === 'shows' ? ' shows' : ' movies') + (browse.q || browse.genre !== 'All' ? ' match' : '');
-    $('#grid').innerHTML = page.length ? page.map(cardHTML).join('') : '<div class="empty" style="grid-column:1/-1"><b>No matches</b>Try a different word or clear the genre filter.</div>';
+    var all = browseList(), page = all.slice(0, browse.shown), filtered = !!(browse.q || browse.genre !== 'All');
+    $('#browse-count').innerHTML = all.length.toLocaleString() + (browse.media === 'shows' ? ' shows' : ' movies') + (filtered ? ' match' : '') +
+      (filtered ? ' \u00b7 <button class="link-btn" data-clear-filters>Clear filters</button>' : '');
+    $('#search-clear').classList.toggle('hidden', !browse.q);
+    $('#grid').innerHTML = page.length ? page.map(cardHTML).join('') :
+      '<div class="empty" style="grid-column:1/-1"><span class="empty-ic">' + ic(ICON.search, 22) + '</span><b>No matches</b>Try a different word, or clear the filters to see everything.' +
+      '<button class="btn btn-sm" data-clear-filters>Clear filters</button></div>';
     $('#show-more').classList.toggle('hidden', all.length <= browse.shown);
     $('#show-more').textContent = 'Show more (' + Math.min(PAGE_SIZE, all.length - browse.shown) + ' of ' + (all.length - browse.shown).toLocaleString() + ' left)';
   }
   var searchT;
-  $('#search').addEventListener('input', function () { var v = this.value; clearTimeout(searchT); searchT = setTimeout(function () { browse.q = v; renderBrowse(true); }, 140); });
+  $('#search').addEventListener('input', function () {
+    var v = this.value; clearTimeout(searchT);
+    $('#search-clear').classList.toggle('hidden', !v);
+    searchT = setTimeout(function () { browse.q = v; renderBrowse(true); }, 140);
+  });
+  function clearBrowseFilters() {
+    browse.q = ''; browse.genre = 'All'; $('#search').value = '';
+    buildGenreChips(); renderBrowse(true);
+  }
+  $('#search-clear').addEventListener('click', function () { $('#search').value = ''; browse.q = ''; renderBrowse(true); $('#search').focus(); });
+  $('#browse').addEventListener('click', function (ev) { if (ev.target.closest('[data-clear-filters]')) clearBrowseFilters(); });
   $('#sort').addEventListener('change', function () { browse.sort = this.value; renderBrowse(true); });
   $('#genre-chips').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-genre]'); if (!b) return;
@@ -675,8 +726,8 @@
       : metaLine(m.year, (m.director && m.director !== 'Unknown') ? 'Directed by ' + m.director : '', runtimeLabel(m.runtime), m.rating ? 'Rated ' + String(m.rating).replace(/-/g, '\u2011') : '');
     var plat = (m.pl && m.pl.length) ? '<div class="platforms"><span class="muted" style="font-size:.8rem">Streaming on</span>' + m.pl.map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('') + '</div>' : '';
     $('#detail-sheet').innerHTML =
-      '<div class="sheet-hero">' + (posterOf(m) ? '<div class="sheet-backdrop" style="background-image:url(&quot;' + esc(posterOf(m)) + '&quot;)"></div>' : '') + coverHTML(m) +
-      '<button class="sheet-close" id="detail-close" aria-label="Close">' + ic(ICON.x, 18) + '</button></div>' +
+      '<div class="sheet-bar"><button class="sheet-close" id="detail-close" aria-label="Close">' + ic(ICON.x, 18) + '</button></div>' +
+      '<div class="sheet-hero">' + (posterOf(m) ? '<div class="sheet-backdrop" style="background-image:url(&quot;' + esc(posterOf(m)) + '&quot;)"></div>' : '') + coverHTML(m) + '</div>' +
       '<div class="sheet-body"><h2>' + esc(m.title) + '</h2><p class="meta-line">' + esc(meta) + '</p>' +
       '<div>' + (m.genres || []).map(function (g) { return '<span class="tag">' + esc(g) + '</span>'; }).join(' ') + '</div>' +
       '<div id="detail-fit">' + detailFit(m) + '</div><p>' + esc(m.description) + '</p>' + plat +
@@ -689,7 +740,7 @@
       '<h3>Taste profile</h3>' + vectorBars(m.vector) +
       '<div class="kw-row">' + (m.keywords || []).map(function (k) { return '<span class="kw">#' + esc(k) + '</span>'; }).join('') + '</div>' +
       '<h3>More like this</h3><div class="similar-grid">' +
-      similar.map(function (s) { return '<button class="card" data-open="' + s.id + '">' + coverHTML(s) + '<div class="card-body"><div class="card-title">' + esc(s.title) + '</div><div class="card-sub">' + esc(yearText(s)) + '</div></div></button>'; }).join('') +
+      similar.map(miniCardHTML).join('') +
       '</div></div>';
     $('#detail-sheet').dataset.id = id;
     $('#detail-overlay').classList.remove('hidden'); document.body.classList.add('locked');
@@ -1006,8 +1057,8 @@
         '<option value="' + TEMP_ID + '"' + (cfg.partner === TEMP_ID ? ' selected' : '') + '>Someone else, just tonight</option></select></div></div>' +
         (cfg.partner === TEMP_ID ? '<input id="q-guest" class="input" style="margin-top:8px" maxlength="20" placeholder="Their name (optional)" value="' + esc(cfg.guestName) + '">' : '');
     }
-    h += '<div class="qs-label">Tonight\'s mood <span class="muted">pick up to 2, or skip</span></div><div class="mood-pills">' +
-      E.MOODS.map(function (m) { return '<button class="mood-chip' + (cfg.moods.indexOf(m.id) >= 0 ? ' on' : (cfg.moods.length >= 2 ? ' off' : '')) + '" data-mood="' + m.id + '">' + esc(m.label) + '</button>'; }).join('') + '</div>';
+    h += '<div class="qs-block"><div class="qs-label">Tonight\'s mood <span class="muted">pick up to 2, or skip</span></div><div class="mood-pills">' +
+      E.MOODS.map(function (m) { return '<button class="mood-chip' + (cfg.moods.indexOf(m.id) >= 0 ? ' on' : (cfg.moods.length >= 2 ? ' off' : '')) + '" data-mood="' + m.id + '" aria-pressed="' + (cfg.moods.indexOf(m.id) >= 0) + '"><span class="mi">' + ic(MOOD_ICON[m.id] || ICON.film, 18) + '</span>' + esc(m.label) + '</button>'; }).join('') + '</div></div>';
     h += '<details class="qs-more" id="qs-more"' + (qsMoreOpen ? ' open' : '') + '><summary><span class="qs-more-t">Fine-tune</span><span class="qs-more-s">' + esc(fineTuneSummary()) + '</span>' + ic(ICON.chevDown, 18) + '</summary><div class="qs-more-body">' +
       '<div class="qs-field"><div class="label">Not tonight <span class="muted">we\'ll leave these out</span></div><div class="chips wrap">' +
       E.AVOIDABLE.map(function (g) { return '<button class="mood-chip avoid' + (cfg.avoid.indexOf(g) >= 0 ? ' on' : '') + '" data-avoid="' + esc(g) + '">' + esc(g) + '</button>'; }).join('') + '</div></div>' +
@@ -1015,7 +1066,7 @@
       '<div class="qs-field"><div class="label">Era</div>' + segHTML('data-ctx-era', ERAS, cfg.era) + '</div>' +
       (showPlat ? '<label class="switch qs-field"><input type="checkbox" id="q-mine"' + (cfg.mine ? ' checked' : '') + '> <span>Only on my streaming services</span></label>' : '') +
       '<div class="qs-field"><div class="label">Length of quiz</div>' + segHTML('data-qrounds', ROUNDS, cfg.rounds) + '</div></div></details>';
-    h += '<button class="btn btn-primary btn-lg btn-block qs-start" id="quiz-start">Start the quiz</button>';
+    h += '<button class="btn btn-primary btn-lg btn-block qs-start" id="quiz-start">Start the quiz' + ic('<path d="M5 12h14M13 6l6 6-6 6"/>', 18) + '</button>';
     $('#quiz-setup').innerHTML = h;
     var more = $('#qs-more'); if (more) more.addEventListener('toggle', function () { qsMoreOpen = more.open; });
   }
@@ -1117,6 +1168,15 @@
     var self = this;
     setTimeout(function () { delete self.dataset.locked; answer('pick', c.dataset.pick); }, 190);
   });
+  /* Desktop shortcuts: left / right pick a side, down = neither. */
+  document.addEventListener('keydown', function (ev) {
+    if (currentView !== 'quiz' || quizPhase !== 'play' || !quiz || !quiz.pair) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var t = ev.target; if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
+    if (['pass-overlay', 'welcome-overlay', 'detail-overlay'].some(function (id) { return !$('#' + id).classList.contains('hidden'); })) return;
+    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') { ev.preventDefault(); var c = $('#quiz-pair [data-pick="' + (ev.key === 'ArrowLeft' ? 'a' : 'b') + '"]'); if (c) c.click(); }
+    else if (ev.key === 'ArrowDown') { ev.preventDefault(); answer('neither'); }
+  });
   $('#quiz-both').addEventListener('click', function () { answer('both'); });
   $('#quiz-neither').addEventListener('click', function () { answer('neither'); });
   $('#quiz-undo').addEventListener('click', function () {
@@ -1156,12 +1216,12 @@
     recordQuiz(player(quiz.aId), mode, quiz.rounds, E.preferenceFromPicks(toPicks(quiz.picks)), titles);
     if (quiz.couple && quiz.bId !== TEMP_ID) recordQuiz(player(quiz.bId), mode, quiz.rounds, E.preferenceFromPicks(toPicks(quiz.picksB)), titles);
     var pa = player(quiz.aId), pb = quiz.couple ? player(quiz.bId) : null, box = $('#quiz-results');
-    box.innerHTML = '<div class="panel"><span class="eyebrow">' + (quiz.couple ? 'For the two of you' : 'Your results') + '</span><h2 style="margin:4px 0 6px">' +
+    box.innerHTML = '<div class="results-head"><span class="eyebrow">' + (quiz.couple ? 'For the two of you' : 'Your results') + '</span><h2>' +
       (quiz.couple ? esc(pa.name) + ' &amp; ' + esc(pb.name) + ', watch this' : (quiz.tv ? 'Your next series' : 'Tonight, you\'re watching')) + '</h2>' +
-      '<p class="muted" style="margin:0">' + (quiz.couple ? 'Every pick clears a minimum fit for both of you, then the fairest overlap wins.' : 'Matched to tonight\'s mood, your ' + quiz.rounds + ' answers and what you have rated and saved') + (quiz.ctxText ? ' · ' + esc(quiz.ctxText) : '') + '.</p></div>' +
+      '<p>' + (quiz.couple ? 'Every pick clears a minimum fit for both of you, then the fairest overlap wins.' : 'Matched to tonight\'s mood, your ' + quiz.rounds + ' answers and what you have rated and saved') + (quiz.ctxText ? ' · ' + esc(quiz.ctxText) : '') + '.</p></div>' +
       '<div id="quiz-result-list">' + resultsHTML(recs, 0) + '</div>' +
-      '<button class="btn btn-block" id="quiz-more">Show 5 more</button>' +
-      '<div class="row" style="margin-top:10px"><button class="btn btn-primary" id="quiz-again" style="flex:1">Play again</button><button class="btn" id="quiz-tweak" style="flex:1">Change mood or filters</button></div>';
+      '<div class="results-foot"><button class="btn btn-block" id="quiz-more">Show 5 more</button>' +
+      '<button class="btn btn-primary" id="quiz-again">Play again</button><button class="btn" id="quiz-tweak">Change mood or filters</button></div>';
     box.classList.remove('hidden');
     $('#quiz-more').onclick = function () {
       var more = recsFor(quiz.shown, 5);
@@ -1189,8 +1249,15 @@
     match: 'A strong match for your taste profile.', hidden: 'A less obvious pick worth discovering.', horror: 'A pick for a darker kind of night.',
     date: 'A date-night mix of romance and laughs.', short: 'Quick to watch and easy to commit to.', critics: 'Highly rated by critics and audiences.', throwback: 'A trip back to an earlier era.'
   };
+  var SHUFFLE_BLURB = {
+    surprise: 'A wildcard from anywhere', match: 'Closest to your taste', unseen: 'Not watched or rated yet', outside: 'Stretch your usual taste', hidden: 'Under-the-radar finds',
+    critics: 'Loved by critics', date: 'Romance and laughs', short: 'Quick to commit to', throwback: 'From before 2009', horror: 'A darker kind of night'
+  };
   function renderShuffleControls() {
-    $('#shuffle-modes').innerHTML = SHUFFLE_MODES.map(function (m) { return '<button class="chip' + (m[0] === shuffle.mode ? ' active' : '') + '" data-smode="' + m[0] + '">' + m[1] + '</button>'; }).join('');
+    $('#shuffle-modes').innerHTML = SHUFFLE_MODES.map(function (m) {
+      return '<button class="mode-tile' + (m[0] === shuffle.mode ? ' active' : '') + '" data-smode="' + m[0] + '" aria-pressed="' + (m[0] === shuffle.mode) + '"><span class="mt-ic">' + ic(SHUF_ICON[m[0]] || ICON.film, 17) +
+        '</span><span><b>' + m[1] + '</b><small>' + SHUFFLE_BLURB[m[0]] + '</small></span></button>';
+    }).join('');
     var gs = {}; listFor(shuffle.media).forEach(function (m) { (m.genres || []).forEach(function (g) { gs[g] = (gs[g] || 0) + 1; }); });
     var cur = $('#shuffle-genre').value || 'All';
     $('#shuffle-genre').innerHTML = ['All'].concat(Object.keys(gs).sort()).map(function (g) { return '<option' + (g === cur ? ' selected' : '') + '>' + esc(g) + '</option>'; }).join('');
@@ -1202,7 +1269,7 @@
   });
   $('#shuffle-modes').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-smode]'); if (!b) return;
-    shuffle.mode = b.dataset.smode; $$('#shuffle-modes .chip').forEach(function (s) { s.classList.toggle('active', s === b); });
+    shuffle.mode = b.dataset.smode; $$('#shuffle-modes .mode-tile').forEach(function (s) { s.classList.toggle('active', s === b); s.setAttribute('aria-pressed', s === b); });
   });
   function weightedPick(items, weight, n, rng) {
     var pool = items.slice(), out = [];
@@ -1334,11 +1401,11 @@
   }
 
   function t20End(inner) { return '<span class="lr-end">' + inner + '</span>'; }
-  function t20Row(r, i, endHTML, note) {
+  function t20Row(r, i, endHTML, note, pill, cls) {
     var m = r.movie;
-    return '<div class="list-row" data-open="' + m.id + '" role="button" tabindex="0"><span class="rank">' + (i + 1) + '</span><span class="mini-cover">' + coverHTML(m) + '</span>' +
+    return '<div class="list-row' + (cls ? ' ' + cls : '') + '" data-open="' + m.id + '" role="button" tabindex="0"><span class="rank">' + (i + 1) + '</span><span class="mini-cover">' + coverHTML(m) + '</span>' +
       '<span class="lr-main"><div class="lr-title">' + esc(m.title) + '</div><div class="lr-sub">' + esc(metaLine(yearText(m), (m.genres || []).slice(0, 2).join(', '), R.badge(m) ? 'Rated ' + R.badge(m) : '')) + '</div>' +
-      (note ? '<div class="lr-note">' + esc(note) + '</div>' : '') + '</span>' + endHTML + '</div>';
+      (note ? '<div class="lr-note">' + esc(note) + '</div>' : '') + (pill ? '<div class="lr-match">' + pill + '</div>' : '') + '</span>' + endHTML + '</div>';
   }
   function renderTop20() {
     var p = me(), t = p.top20, root = $('#top20-root'), mode = t.mode, canon = mode === 'canon', mineMode = mode === 'mine';
@@ -1361,17 +1428,16 @@
     if (mineMode) {
       var items = mineItems(p, t20media);
       if (!items.length) {
-        h += '<div class="empty t20-empty"><b>Build your own Top 20</b>Add titles one at a time, or start from our suggestions and swap anything out.' +
+        h += '<div class="empty t20-empty"><span class="empty-ic">' + ic(ICON.trophy, 22) + '</span><b>Build your own Top 20</b>Add titles one at a time, or start from our suggestions and swap anything out.' +
           '<div class="row" style="justify-content:center;margin-top:14px"><button class="btn btn-primary" id="t20-addopen2">Add a title</button><button class="btn" id="t20-fill">Start from suggestions</button></div></div>';
       } else {
         h += '<div class="list-stack">' + items.map(function (r, i) {
           var m = r.movie, last = i === items.length - 1;
-          return t20Row(r, i, t20End((r.match != null ? '<span class="match-pill sm">' + r.match + '%</span>' : '') +
-            '<span class="lr-tools">' +
+          return t20Row(r, i, t20End('<span class="lr-tools">' +
             '<button class="x-btn" data-t20up="' + i + '" title="Move up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>' + ic(ICON.chevUp, 15) + '</button>' +
             '<button class="x-btn" data-t20down="' + i + '" title="Move down" aria-label="Move down"' + (last ? ' disabled' : '') + '>' + ic(ICON.chevDown, 15) + '</button>' +
             '<button class="x-btn" data-t20swap="' + i + '" title="Replace" aria-label="Replace this title">' + ic(ICON.swap, 15) + '</button>' +
-            '<button class="x-btn" data-t20rm="' + m.id + '" title="Remove" aria-label="Remove from my Top 20">' + ic(ICON.x, 15) + '</button></span>'), '');
+            '<button class="x-btn" data-t20rm="' + m.id + '" title="Remove" aria-label="Remove from my Top 20">' + ic(ICON.x, 15) + '</button></span>'), '', r.match != null ? '<span class="match-pill">' + r.match + '% match</span>' : '', 'mine');
         }).join('') + '</div>';
         if (mineIds.length < T20_MAX) {
           h += '<div class="t20-more"><button class="btn btn-block" id="t20-addopen2">' + ic(ICON.plus, 16) + 'Add a title <span class="muted">· ' + (T20_MAX - mineIds.length) + ' open</span></button>' +
@@ -1382,11 +1448,11 @@
       var auto = top20Items(p, t20media), inMine = t.mine[t20media];
       h += auto.length ? '<div class="list-stack">' + auto.map(function (r, i) {
         var m = r.movie, on = inMine.indexOf(m.id) >= 0;
-        return t20Row(r, i, t20End((canon || needQuiz ? '' : '<span class="match-pill sm">' + r.match + '%</span>') +
-          '<span class="lr-tools one">' +
+        return t20Row(r, i, t20End('<span class="lr-tools one">' +
           '<button class="x-btn' + (on ? ' on' : '') + '" data-t20add="' + m.id + '" title="' + (on ? 'In your list' : 'Add to my list') + '" aria-label="Add to my Top 20">' + ic(on ? ICON.check : ICON.plus, 15) + '</button>' +
-          '<button class="x-btn" data-t20hide="' + m.id + '" title="Not interested" aria-label="Remove from this list">' + ic(ICON.x, 15) + '</button></span>'), canon ? m.description : (r.why === 'A consensus favourite.' ? '' : r.why));
-      }).join('') + '</div>' : '<div class="empty"><b>Nothing matches those filters</b>Loosen the genre or era filters.</div>';
+          '<button class="x-btn" data-t20hide="' + m.id + '" title="Not interested" aria-label="Remove from this list">' + ic(ICON.x, 15) + '</button></span>'), canon ? m.description : (r.why === 'A consensus favourite.' ? '' : r.why),
+          canon || needQuiz ? '' : '<span class="match-pill">' + r.match + '% match</span>');
+      }).join('') + '</div>' : '<div class="empty"><span class="empty-ic">' + ic(ICON.filter, 22) + '</span><b>Nothing matches those filters</b>Loosen the genre or era filters.</div>';
       if (t.hidden.length) h += '<p class="fineprint" style="text-align:center;margin-top:14px">' + t.hidden.length + ' hidden · <button class="link-btn" id="t20-restore">Restore all</button></p>';
     }
     root.innerHTML = h;
@@ -1553,7 +1619,7 @@
   var avSet = 0;
   function miniGrid(ids, emptyMsg) {
     var items = ids.map(anyById).filter(Boolean);
-    return items.length ? '<div class="mini-grid">' + items.slice(-12).reverse().map(function (m) { return '<button class="card" data-open="' + m.id + '">' + coverHTML(m) + '<div class="card-body"><div class="card-title">' + esc(m.title) + '</div></div></button>'; }).join('') + '</div>' : '<p class="muted">' + emptyMsg + '</p>';
+    return items.length ? '<div class="mini-grid">' + items.slice(-12).reverse().map(miniCardHTML).join('') + '</div>' : '<p class="muted">' + emptyMsg + '</p>';
   }
   function pzFold(key, title, meta, lead, body) {
     return '<details class="pz-fold" data-pz="' + key + '"' + (accOpen[key] ? ' open' : '') + '><summary>' + (lead || '') + '<span class="pz-t">' + title + '</span><span class="pz-m">' + meta + '</span>' + ic(ICON.chevDown, 18) + '</summary><div class="pz-body">' + body + '</div></details>';
@@ -1668,7 +1734,13 @@
     var claimed = folks.filter(function (x) { return !x.unclaimed && !x.guest; });
     var unclaimed = folks.filter(function (x) { return x.unclaimed; });
     var err = '<p class="error hidden" id="w-error"></p>';
-    function head(sub) { return '<div class="welcome-head"><svg class="welcome-mark" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="4" fill="currentColor"/><path d="M10 9l5 3-5 3z" fill="var(--accent-ink)"/></svg><h2>Movie Night</h2><p class="muted">' + sub + '</p></div>'; }
+    function head(sub) { return '<div class="welcome-head"><span class="welcome-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26"><path d="M8.5 5.5v13a.8.8 0 0 0 1.2.7l10-6.5a.8.8 0 0 0 0-1.4l-10-6.5a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg></span><h2>Movie Night</h2><p class="muted">' + sub + '</p></div>'; }
+    function points() {
+      return '<ul class="welcome-points">' +
+        '<li><span class="wp-ic">' + ic(ICON.target, 17) + '</span><span><b>Mood-first picks</b>A few this-or-that questions, then your match.</span></li>' +
+        '<li><span class="wp-ic">' + ic(ICON.users, 17) + '</span><span><b>Solo or couples</b>Pass the phone and find one you both like.</span></li>' +
+        '<li><span class="wp-ic">' + ic(ICON.lockSm, 17) + '</span><span><b>Private by design</b>Accounts and ratings stay on this device.</span></li></ul>';
+    }
     function showErr(msg) { var e = $('#w-error'); e.textContent = msg; e.classList.remove('hidden'); }
     var cryptoFail = 'Sign-in isn\'t available in this browser (Web Crypto is missing). Try a current browser.';
     if (mode === 'login') {
@@ -1700,7 +1772,7 @@
         else A.createAccount({ name: $('#w-name').value, email: email, pin: pin, emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], style: 'mono', color: COLORS[Math.floor(Math.random() * COLORS.length)] }).then(done).catch(fail);
       };
     } else {
-      card.innerHTML = head('Tell it your mood, answer a few this-or-that questions, and get the movie or show that fits tonight. Accounts live on this device only.') +
+      card.innerHTML = head('Find tonight\'s movie without the 45-minute scroll.') + points() +
         (claimed.length ? '<button class="btn btn-primary btn-lg btn-block" id="w-go-login">Log in</button>' : '') +
         '<button class="btn ' + (claimed.length ? '' : 'btn-primary ') + 'btn-lg btn-block" id="w-go-signup" style="margin-top:8px">Create account</button>' +
         '<button class="btn btn-ghost btn-block" id="w-go-guest" style="margin-top:8px">Continue as guest</button>' +
@@ -1712,6 +1784,11 @@
     }
     $('#welcome-overlay').classList.remove('hidden'); document.body.classList.add('locked');
   }
+
+  /* ---------- back to top ---------- */
+  var toTop = $('#to-top');
+  window.addEventListener('scroll', function () { toTop.classList.toggle('show', window.scrollY > 900); }, { passive: true });
+  toTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
   /* ---------- init ---------- */
   applyTheme(themeSettings(me()));

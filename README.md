@@ -1,5 +1,7 @@
 # 🎬 Movie Night
 
+> **v14:** complete UI/UX redesign — poster-first browsing, icon-led quiz, tile-based Shuffle, refined Top 20 and detail sheet. See [UPGRADE-NOTES.md](UPGRADE-NOTES.md).
+
 > **v12:** premium redesign, mood-first adaptive quiz with Couples mode, personal Top 20, hamburger watchlists, Account page with themes/avatars, and a TMDB importer for +8,000 movies / +3,500 shows. See [UPGRADE-NOTES.md](UPGRADE-NOTES.md).
 
 **Find tonight's movie without the 45-minute scroll.**
